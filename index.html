@@ -12,7 +12,9 @@
   <meta property="og:description" content="Kaleidohedra, Rhombiverse and Polyhedraverse: three apps on one geometry, by DICTO." />
   <meta property="og:url" content="https://dictospheres.vercel.app/" />
   <meta name="theme-color" content="#0a0b10" />
-  <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="./favicon.png" type="image/png" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+  <meta property="og:image" content="https://dictospheres.vercel.app/og-image.png" />
   <script type="application/ld+json">{"@context": "https://schema.org", "@type": "ProfilePage", "mainEntity": {"@type": "Person", "name": "DICTO", "description": "Geometric sculptor in Osaka using recycled PET; modular systems B1NR / DICTOspheres", "sameAs": ["https://instagram.com/dictospheres", "https://x.com/DICTOspheres", "https://www.tiktok.com/@dictosphere", "https://www.flickr.com/people/202294813@N03/", "https://github.com/DICTOR-Master"]}}</script>
   <style>
     :root {
@@ -27,7 +29,9 @@
     a { color: inherit; }
 
     header { text-align: center; margin-bottom: 28px; }
-    .mark { width: 72px; height: 72px; margin: 0 auto 10px; display: block; }
+    .mark { width: 112px; height: 112px; margin: 0 auto 8px; display: block; }
+    .emblem-key { margin: 0 0 14px; font-size: 12px; letter-spacing: 0.04em; color: var(--muted); }
+    .emblem-key b { color: var(--gold); letter-spacing: 0.12em; }
     h1 { margin: 0; font-size: 40px; font-weight: 800; letter-spacing: 0.14em; color: var(--gold); }
     .bio { margin: 6px 0 0; color: var(--muted); font-size: 15px; }
     .bio b { color: var(--text); font-weight: 600; }
@@ -75,10 +79,13 @@
 <body>
   <main>
     <header>
-      <!-- A rhombic dodecahedron, the shape everything here grows from. -->
-      <svg class="mark" viewBox="-60 -60 120 120" aria-hidden="true">
-        <path d="M0.0,-47.4L37.7,-20.7M37.7,-20.7L43.9,-15.0M43.9,-15.0L6.3,-41.8M6.3,-41.8L0.0,-47.4M31.4,21.1L37.7,26.7M37.7,26.7L43.9,-15.0M37.7,-20.7L31.4,21.1M0.0,-47.4L-6.3,-5.6M-6.3,-5.6L31.4,21.1M-31.4,-21.1L6.3,-41.8M43.9,-15.0L6.3,5.6M6.3,5.6L-31.4,-21.1M0.0,47.4L6.3,5.6M37.7,26.7L0.0,47.4M0.0,47.4L-37.7,20.7M-37.7,20.7L-31.4,-21.1M-31.4,-21.1L-37.7,-26.7M-37.7,-26.7L0.0,-47.4M-43.9,15.0L-6.3,-5.6M-37.7,-26.7L-43.9,15.0M-37.7,20.7L-43.9,15.0M31.4,21.1L-6.3,41.8M-6.3,41.8L0.0,47.4M-43.9,15.0L-6.3,41.8" fill="none" stroke="#e8c25a" stroke-width="2.2" stroke-linecap="round" />
-      </svg>
+      <!-- DICTO's emblem, an abstraction of the name DICTO (DICTO, 2026-10-09): D, the open
+           backward-pointing C at the top; I, the ellipse in its circle; C, the C; T, the four-pointed
+           star; O, the dot, a singularity. The letters stand for the five Platonic solids,
+           Dodecahedron, Icosahedron, Cube, Tetrahedron, Octahedron, which inspired DICTO's work and
+           are the basis of five of DICTO's six Japanese design patents for connecting PET bottles. -->
+      <img class="mark" src="./dicto-logo.png" width="120" height="120" alt="DICTO emblem: an abstraction of the name DICTO" />
+      <p class="emblem-key"><b>D·I·C·T·O</b> — Dodecahedron, Icosahedron, Cube, Tetrahedron, Octahedron</p>
       <h1>DICTO</h1>
       <p class="bio">Geometric sculptor in Osaka using recycled PET<br />Modular systems: <b>B1NR</b> / <b>DICTOspheres</b></p>
     </header>
