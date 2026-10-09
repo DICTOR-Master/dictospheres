@@ -32,6 +32,12 @@
     .mark { width: 112px; height: 112px; margin: 0 auto 8px; display: block; }
     .emblem-key { margin: 0 0 14px; font-size: 12px; letter-spacing: 0.04em; color: var(--muted); }
     .emblem-key b { color: var(--gold); letter-spacing: 0.12em; }
+    /* Zenodo-style DOI badges: grey label, blue number; about 30px tall to tap. */
+    .doi-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 14px; }
+    .doi-badge { display: inline-flex; border-radius: 3px; overflow: hidden; text-decoration: none; font: 600 11px/1 system-ui, sans-serif; }
+    .doi-badge span { padding: 9px 8px; color: #fff; white-space: nowrap; }
+    .doi-badge span:first-child { background: #555; }
+    .doi-badge span:last-child { background: #0a7bbc; }
     h1 { margin: 0; font-size: 40px; font-weight: 800; letter-spacing: 0.14em; color: var(--gold); }
     .bio { margin: 6px 0 0; color: var(--muted); font-size: 15px; }
     .bio b { color: var(--text); font-weight: 600; }
@@ -88,6 +94,11 @@
       <p class="emblem-key"><b>D·I·C·T·O</b> — Dodecahedron, Icosahedron, Cube, Tetrahedron, Octahedron</p>
       <h1>DICTO</h1>
       <p class="bio">Geometric sculptor in Osaka using recycled PET<br />Modular systems: <b>B1NR</b> / <b>DICTOspheres</b></p>
+      <!-- Zenodo DOI badges (DICTO, 2026-10-09): DICTO's archived work, each DOI always the latest version. -->
+      <div class="doi-badges">
+        <a class="doi-badge" href="https://doi.org/10.5281/zenodo.23173809" title="Kaleidohedra by DICTO: DICTO's findings, on Zenodo"><span>Kaleidohedra DOI</span><span>10.5281/zenodo.23173809</span></a>
+        <a class="doi-badge" href="https://doi.org/10.5281/zenodo.23173896" title="RHOMBITURE by DICTO, on Zenodo"><span>RHOMBITURE DOI</span><span>10.5281/zenodo.23173896</span></a>
+      </div>
     </header>
 
     <h2>Three apps, one geometry</h2>
