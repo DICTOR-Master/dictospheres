@@ -75,10 +75,13 @@
     .papers { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin: 0 0 8px; }
     .paper { display: grid; gap: 6px; text-decoration: none; color: inherit; border: 1px solid rgba(var(--gold-rgb), 0.25); border-radius: 10px; overflow: hidden; background: rgba(var(--gold-rgb), 0.04); }
     .paper:hover, .paper:focus-visible { border-color: rgba(var(--gold-rgb), 0.6); }
-    .paper img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: #0d0d0d; }
+    .paper img { width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: #0d0d0d; }
     .paper .t { font-weight: 600; padding: 0 12px; }
     .paper .s { color: var(--muted); font-size: 13px; padding: 0 12px 12px; }
     .paper .num { color: var(--gold); font-weight: 700; margin-right: 4px; }
+    .paper.feature { grid-column: 1 / -1; }
+    .paper.feature img { aspect-ratio: 16 / 9; }
+    .paper .soon { color: var(--muted); font-weight: 400; font-size: 12px; border: 1px solid rgba(var(--gold-rgb), 0.35); border-radius: 999px; padding: 1px 8px; margin-left: 6px; vertical-align: 1px; }
     .disc-note { color: var(--muted); font-size: 13px; margin: -4px 0 10px; }
     .disc-note a { color: var(--gold); }
 
@@ -126,6 +129,17 @@
     </a>
     <span class="extra">New here? Try <a href="https://rhombiverse.dictospheres.com/rhombis.html">RHOMBIS</a>, the 3D puzzle from Rhombiverse</span>
 
+    <h2>Papers</h2>
+    <p class="disc-note">Short papers by DICTO, four pages each, with the checks behind every claim.</p>
+    <div class="papers">
+      <a class="paper feature" href="https://kaleidohedra.dictospheres.com/?dicto"><img src="papers/chain-of-karma.jpg" alt="The Chain of Karma: icosahedra opening into Lotus seeds, level within level" loading="eager" width="960" height="540"><span class="t"><span class="num">#22</span> The Chain of Karma <span class="soon">forthcoming</span></span><span class="s">The icosahedron and the dodecahedron as endless shells of each other: every icosahedron opens into a Lotus seed, without end. See the Lotus seed in Kaleidohedra: DICTO → Icosa.</span></a>
+      <a class="paper" href="https://github.com/DICTOR-Master/kaleidohedra/blob/master/papers/ekp/ekp-cell.pdf"><img src="papers/ekp.jpg" alt="The Euclid–Kepler–Pacioli Cell" loading="lazy" width="480" height="360"><span class="t"><span class="num">#8</span> The Euclid–Kepler–Pacioli Cell</span><span class="s">All five Platonic solids nest on 13 points in one periodic cell.</span></a>
+      <a class="paper" href="https://github.com/DICTOR-Master/kaleidohedra/blob/master/papers/dicto-star/dicto-star.pdf"><img src="papers/dicto-star.jpg" alt="The DICTO-Star" loading="lazy" width="480" height="360"><span class="t"><span class="num">#14</span> The DICTO-Star</span><span class="s">An icosidodecahedron, 12 dodecahedra and 20 tridiminished icosahedra closing exactly.</span></a>
+      <a class="paper" href="https://github.com/DICTOR-Master/kaleidohedra/blob/master/papers/dodeca13/dicto-dodeca-13.pdf"><img src="papers/dodeca13.jpg" alt="The DICTO Dodeca-13" loading="lazy" width="480" height="360"><span class="t"><span class="num">#13</span> The DICTO Dodeca-13</span><span class="s">The 13-dodecahedron cluster made solid, with two exact gap pieces.</span></a>
+      <a class="paper" href="https://github.com/DICTOR-Master/kaleidohedra/blob/master/papers/kagome-hulls/kagome-hulls.pdf"><img src="papers/kagome-hulls.jpg" alt="Kagome Hulls" loading="lazy" width="480" height="360"><span class="t"><span class="num">#17</span> Kagome Hulls</span><span class="s">Six corner-sharing networks of solid clusters, one rule and its icosahedral exception.</span></a>
+      <a class="paper" href="https://github.com/DICTOR-Master/kaleidohedra/blob/master/papers/hexa/dicto-hexa.pdf"><img src="papers/hexa.jpg" alt="The DICTO Hexa" loading="lazy" width="480" height="360"><span class="t"><span class="num">#18</span> The DICTO Hexa</span><span class="s">A cube of 8 DICTO Hexa Jewels, its Hexa-Key and their 5 : 3 checkerboard.</span></a>
+    </div>
+
     <h2>Discoveries</h2>
     <p class="disc-note">DICTO's findings, each checked exactly in code and archived on Zenodo (<a href="https://doi.org/10.5281/zenodo.23173809">10.5281/zenodo.23173809</a>), newest first.</p>
     <ul class="links">
@@ -140,16 +154,6 @@
       <li><a href="https://github.com/DICTOR-Master/kaleidohedra/blob/master/DISCOVERIES.md#5-regular-hexagon-elongated-dodecahedron"><span><span class="t"><span class="num">#5</span> Regular-hexagon elongated dodecahedron</span><span class="s">Found independently (known: Grünbaum, 2010)</span></span><span class="go">→</span></a></li>
       <li><a href="https://github.com/DICTOR-Master/kaleidohedra/blob/master/DISCOVERIES.md#1-dicto-skewed-rhombic-dodecahedron"><span><span class="t"><span class="num">#1</span> DICTO skewed rhombic dodecahedron</span><span class="s">A space-filler of 60° and 72° rhombi, and its two elongated forms</span></span><span class="go">→</span></a></li>
     </ul>
-
-    <h2>Papers</h2>
-    <p class="disc-note">Short papers by DICTO, four pages each, with the checks behind every claim.</p>
-    <div class="papers">
-      <a class="paper" href="https://github.com/DICTOR-Master/kaleidohedra/blob/master/papers/ekp/ekp-cell.pdf"><img src="papers/ekp.jpg" alt="The Euclid–Kepler–Pacioli Cell" loading="lazy" width="480" height="360"><span class="t"><span class="num">#8</span> The Euclid–Kepler–Pacioli Cell</span><span class="s">All five Platonic solids nest on 13 points in one periodic cell.</span></a>
-      <a class="paper" href="https://github.com/DICTOR-Master/kaleidohedra/blob/master/papers/dicto-star/dicto-star.pdf"><img src="papers/dicto-star.jpg" alt="The DICTO-Star" loading="lazy" width="480" height="360"><span class="t"><span class="num">#14</span> The DICTO-Star</span><span class="s">An icosidodecahedron, 12 dodecahedra and 20 tridiminished icosahedra closing exactly.</span></a>
-      <a class="paper" href="https://github.com/DICTOR-Master/kaleidohedra/blob/master/papers/dodeca13/dicto-dodeca-13.pdf"><img src="papers/dodeca13.jpg" alt="The DICTO Dodeca-13" loading="lazy" width="480" height="360"><span class="t"><span class="num">#13</span> The DICTO Dodeca-13</span><span class="s">The 13-dodecahedron cluster made solid, with two exact gap pieces.</span></a>
-      <a class="paper" href="https://github.com/DICTOR-Master/kaleidohedra/blob/master/papers/kagome-hulls/kagome-hulls.pdf"><img src="papers/kagome-hulls.jpg" alt="Kagome Hulls" loading="lazy" width="480" height="360"><span class="t"><span class="num">#17</span> Kagome Hulls</span><span class="s">Six corner-sharing networks of solid clusters, one rule and its icosahedral exception.</span></a>
-      <a class="paper" href="https://github.com/DICTOR-Master/kaleidohedra/blob/master/papers/hexa/dicto-hexa.pdf"><img src="papers/hexa.jpg" alt="The DICTO Hexa" loading="lazy" width="480" height="360"><span class="t"><span class="num">#18</span> The DICTO Hexa</span><span class="s">A cube of 8 DICTO Hexa Jewels, its Hexa-Key and their 5 : 3 checkerboard.</span></a>
-    </div>
 
     <h2>Work</h2>
     <ul class="links">
