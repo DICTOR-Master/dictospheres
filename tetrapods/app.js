@@ -15,6 +15,10 @@
     return hAt(r0, c0) * (1 - fc) * (1 - fr) + hAt(r0, c0 + 1) * fc * (1 - fr) + hAt(r0 + 1, c0) * (1 - fc) * fr + hAt(r0 + 1, c0 + 1) * fc * fr;
   }
 
+  // beyond the two ends the coast carries on as its own mirror image (reflected about each end), so the shoreline runs on unbroken
+  const reflX = (x) => { const P = 2 * SX; let u = ((x + SX / 2) % P + P) % P; if (u > SX) u = P - u; return u - SX / 2; };
+  const groundAt = (x, z) => heightAtXZ(reflX(x), Math.max(-SZ / 2, Math.min(SZ / 2, z)));
+
   // ---- the families: legs from a centre, seaside style (leg length 2.2 m) ----
   const norm = (v) => { const l = Math.hypot(...v); return v.map((x) => x / l); };
   const FAMILIES = {
@@ -96,14 +100,18 @@
   const tg = new THREE.PlaneGeometry(SX, SZ, FW - 1, FH - 1); tg.rotateX(-Math.PI / 2);
   const tp = tg.attributes.position, tcol = new Float32Array(tp.count * 3), col = new THREE.Color();
   const SAND = new THREE.Color(0xcdbb8e), WETSAND = new THREE.Color(0x8f8366), SEABED = new THREE.Color(0x9a9a78), GRASS = new THREE.Color(0x5f7d45), WOOD = new THREE.Color(0x2f4a2c), ROCK = new THREE.Color(0x77736b), TOWN = new THREE.Color(0x9a948a);
+  function groundColour(c, y, slope) {   // one colour rule for the real coast and the land around it
+    if (y < -0.3) c.copy(SEABED).lerp(WETSAND, Math.max(0, 1 + y / 3));
+    else if (y < 1.6) c.copy(WETSAND).lerp(SAND, (y + 0.3) / 1.9);
+    else if (slope > 0.55) c.copy(ROCK);
+    else if (y < 8 && slope < 0.08) c.copy(TOWN).lerp(GRASS, 0.45);
+    else c.copy(GRASS).lerp(WOOD, Math.min(1, (y - 6) / 25));
+    return c;
+  }
   for (let i = 0; i < tp.count; i++) {
     const cf = (i % FW) / UP, rf = Math.floor(i / FW) / UP, y = hFine(rf, cf); tp.setY(i, y);
     const e = 0.5, slope = Math.hypot(hFine(rf, cf + e) - hFine(rf, cf - e), hFine(rf + e, cf) - hFine(rf - e, cf)) / (2 * e * CELL);
-    if (y < -0.3) col.copy(SEABED).lerp(WETSAND, Math.max(0, 1 + y / 3));
-    else if (y < 1.6) col.copy(WETSAND).lerp(SAND, (y + 0.3) / 1.9);
-    else if (slope > 0.55) col.copy(ROCK);
-    else if (y < 8 && slope < 0.08) col.copy(TOWN).lerp(GRASS, 0.45);
-    else col.copy(GRASS).lerp(WOOD, Math.min(1, (y - 6) / 25));
+    groundColour(col, y, slope);
     tcol.set([col.r, col.g, col.b], i * 3);
   }
   tg.setAttribute('color', new THREE.BufferAttribute(tcol, 3)); tg.computeVertexNormals();
@@ -114,21 +122,26 @@
   // A coarse skirt under and around the terrain, continued from its edges.
   // Its grid lines fall exactly on the terrain's edges, and inside them it drops well below, so it never shows through the real coast.
   const KX = 12000, KZ = 12000;   // 6 km each way, past the haze
-  const axis = (half, K) => { const a = []; for (let v = -K / 2; v < -half - 1; v += 40) a.push(v); a.push(-half); for (let v = -half + 40; v < half - 1; v += 40) a.push(v); a.push(half); for (let v = half + 40; v <= K / 2; v += 40) a.push(v); return a; };
+  const step = (d) => (d < 700 ? 10 : 40);   // fine near the real coast, coarse far off
+  const axis = (half, K) => { const a = []; for (let v = -K / 2; v < -half - 1; v += step(-half - v)) a.push(v); a.push(-half); for (let v = -half + 40; v < half - 1; v += 40) a.push(v); a.push(half); for (let v = half + 10; v <= K / 2; v += step(v - half)) a.push(v); return a; };
   const XS = axis(SX / 2, KX), ZS = axis(SZ / 2, KZ), kpos = [], kidx = [];
   for (const z of ZS) for (const x of XS) kpos.push(x, 0, z);
   for (let j = 0; j + 1 < ZS.length; j++) for (let i = 0; i + 1 < XS.length; i++) { const a0 = j * XS.length + i, b0 = a0 + 1, c0 = a0 + XS.length, d0 = c0 + 1; kidx.push(a0, c0, b0, b0, c0, d0); }
   const kg = new THREE.BufferGeometry(); kg.setAttribute('position', new THREE.Float32BufferAttribute(kpos, 3)); kg.setIndex(kidx);
   const kp = kg.attributes.position, kcol = new Float32Array(kp.count * 3);
   for (let i = 0; i < kp.count; i++) {
-    const x = kp.getX(i), z = kp.getZ(i), cx = Math.max(-SX / 2, Math.min(SX / 2, x)), cz = Math.max(-SZ / 2, Math.min(SZ / 2, z));
-    const out = Math.hypot(x - cx, z - cz), base = heightAtXZ(cx, cz);
+    const x = kp.getX(i), z = kp.getZ(i), cz = Math.max(-SZ / 2, Math.min(SZ / 2, z)), back = Math.max(0, z - SZ / 2);
+    let base = groundAt(x, cz);
+    if (back > 0) {   // behind, the back edge's heights are smoothed more the further back, so they do not run on as streaks
+      const span = Math.min(400, back * 0.6); let sum = 0; for (let k = -4; k <= 4; k++) sum += groundAt(x + k * span / 4, cz); base = base + (sum / 9 - base) * Math.min(1, back / 300);
+    }
     let y = base;
     // behind the land: wooded hills rising to ridges, so there is never empty space behind it
-    if (base > 0.5) y += Math.min(out, 2500) * 0.09 * (1 + 0.45 * Math.sin(x * 0.0021) * Math.cos(z * 0.0017)) + 18 * Math.sin(x * 0.006 + z * 0.002) * Math.min(1, out / 300) + 7 * Math.sin(x * 0.019 - z * 0.011) * Math.min(1, out / 150);
+    if (base > 0.5 && back > 0) y += Math.min(back, 2500) * 0.09 * (1 + 0.45 * Math.sin(x * 0.0021) * Math.cos(z * 0.0017)) + 18 * Math.sin(x * 0.006 + z * 0.002) * Math.min(1, back / 300) + 7 * Math.sin(x * 0.019 - z * 0.011) * Math.min(1, back / 150);
     if (Math.abs(x) < SX / 2 - 1 && Math.abs(z) < SZ / 2 - 1) y = Math.min(base, 0) - 6;   // under the real terrain
     kp.setY(i, y);
-    if (y < -0.3) col.copy(SEABED).lerp(SAND, Math.max(0, 1 + y / 3.5) * 0.6); else if (y < 1.6) col.copy(SAND); else col.copy(GRASS).lerp(WOOD, Math.min(1, (y - 6) / 30)).lerp(WOOD, 0.3 * (0.5 + 0.5 * Math.sin(x * 0.05) * Math.sin(z * 0.043)));
+    const e = 6, slope = Math.hypot(groundAt(x + e, cz) - groundAt(x - e, cz), groundAt(x, cz + e) - groundAt(x, cz - e)) / (2 * e);
+    groundColour(col, y, back > 0 ? Math.max(slope, 0.1) : slope);
     kcol.set([col.r, col.g, col.b], i * 3);
   }
   kg.setAttribute('color', new THREE.BufferAttribute(kcol, 3)); kg.computeVertexNormals();
@@ -240,7 +253,7 @@
 
   // the direction from the land out to sea at a point (the downhill direction of the terrain), so the camera stands offshore
   function shoreNormal(x, z) {
-    const e = 12, gx = heightAtXZ(x + e, z) - heightAtXZ(x - e, z), gz = heightAtXZ(x, z + e) - heightAtXZ(x, z - e), l = Math.hypot(gx, gz) || 1;
+    const e = 12, gx = groundAt(x + e, z) - groundAt(x - e, z), gz = groundAt(x, z + e) - groundAt(x, z - e), l = Math.hypot(gx, gz) || 1;
     return [-gx / l, -gz / l];
   }
   // ---- rocks and pines: placed from the terrain with a fixed seed, so every visitor sees the same coast ----
@@ -259,13 +272,16 @@
     else if (y >= 2.5 && s > 0.55) p = 0.05;
     if (rand() < p) { const n = 1 + Math.floor(rand() * 3); for (let k = 0; k < n; k++) rocks.push([r + rand() - 0.5, c + rand() - 0.5, 0.5 + rand() * rand() * 1.8]); }
   }
+  const EDGE = 140;   // cells (about 550 m) of trees and rocks repeated in the mirror past each end
+  const mirrorList = (list) => { for (const t of list.slice()) { if (t[1] < EDGE) list.push([t[0], -t[1], ...t.slice(2)]); if (t[1] > W - 1 - EDGE) list.push([t[0], 2 * (W - 1) - t[1], ...t.slice(2)]); } };
+  mirrorList(rocks);
   const rockMesh = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ roughness: 1, flatShading: true }), rocks.length);
   rocks.forEach(([r, c, size], i) => {
-    const x = -SX / 2 + c * CELL, z = -SZ / 2 + r * CELL, y = heightAtXZ(x, z) - size * 0.3;
+    const x = -SX / 2 + c * CELL, z = -SZ / 2 + r * CELL, y = groundAt(x, z) - size * 0.3;
     vp.set(x, y, z); vs.set(size * (0.9 + rand() * 0.5), size * (0.55 + rand() * 0.35), size * (0.9 + rand() * 0.5));
     qq.setFromEuler(ee.set(rand() * 0.6, rand() * 6.28, rand() * 0.6)); rockMesh.setMatrixAt(i, m4.compose(vp, qq, vs));
     rockMesh.setColorAt(i, tint.setHSL(0.09 + rand() * 0.05, 0.06 + rand() * 0.06, 0.36 + rand() * 0.18));
-    if (y < 4) { const b = new CANNON.Body({ mass: 0, material: mat }); b.addShape(new CANNON.Sphere(size * 0.8)); b.position.set(x, y, z); world.addBody(b); }
+    if (y < 4 && Math.abs(x) < SX / 2) { const b = new CANNON.Body({ mass: 0, material: mat }); b.addShape(new CANNON.Sphere(size * 0.8)); b.position.set(x, y, z); world.addBody(b); }
   });
   scene.add(rockMesh);
   // pines: Japanese black pines, a leaning trunk and flat layered crowns; a seaside row just above the shore and woods on the hills,
@@ -277,14 +293,15 @@
     const p = nearSea(r, c, 3) ? 0.16 : Math.min(0.32, 0.04 + (y - 6) * 0.006);
     if (rand() < p) pines.push([r + rand() - 0.5, c + rand() - 0.5, 0.7 + rand() * 0.6]);
   }
+  mirrorList(pines);
   const LAYERS = 3;
   const trunkGeo = new THREE.CylinderGeometry(0.16, 0.3, 1, 6); trunkGeo.translate(0, 0.5, 0);
   const trunks = new THREE.InstancedMesh(trunkGeo, new THREE.MeshStandardMaterial({ color: 0x5b4636, roughness: 1 }), pines.length);
   const crowns = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ roughness: 1, flatShading: true }), pines.length * LAYERS);
   const lean = new THREE.Vector3();
   pines.forEach(([r, c, k], i) => {
-    const x = -SX / 2 + c * CELL, z = -SZ / 2 + r * CELL, y = heightAtXZ(x, z), tall = (7 + rand() * 5) * k;
-    const n = shoreNormal(x, z), tilt = nearSea(Math.round(r), Math.round(c), 3) ? 0.18 + rand() * 0.15 : rand() * 0.08;   // shore pines lean out to sea
+    const x = -SX / 2 + c * CELL, z = -SZ / 2 + r * CELL, y = groundAt(x, z), tall = (7 + rand() * 5) * k, cr = (reflX(x) + SX / 2) / CELL;
+    const n = shoreNormal(x, z), tilt = nearSea(Math.round(r), Math.round(cr), 3) ? 0.18 + rand() * 0.15 : rand() * 0.08;   // shore pines lean out to sea
     qq.setFromUnitVectors(new THREE.Vector3(0, 1, 0), lean.set(n[0] * tilt, 1, n[1] * tilt).normalize());
     trunks.setMatrixAt(i, m4.compose(vp.set(x, y - 0.3, z), qq, vs.set(k, tall, k)));
     for (let j = 0; j < LAYERS; j++) {
@@ -302,7 +319,7 @@
   controls.maxPolarAngle = Math.PI / 2 - 0.06; controls.minDistance = 8; controls.maxDistance = 900;
   function look(x, z, d = 60) {
     const y = Math.max(0, heightAtXZ(x, z));
-    controls.target.set(x, y + 1, z); const n = shoreNormal(x, z); camera.position.set(x + n[0] * d, y + d * 0.6, z + n[1] * d); controls.update();
+    controls.target.set(x, y + 1, z); camera.position.set(x + d * 0.25, y + d * 0.6, z - d); controls.update();   // from out at sea, the same way every time
   }
 
   // ---- panel ----
@@ -337,12 +354,12 @@
   });
 
   // ---- start: the heap, then this visit's own block ----
-  renderPanel(); setStatus('Loading the heap…'); look(...focus, 160);
+  renderPanel(); setStatus('Loading the heap…'); look(...focus, 55);   // the view stays here while the heap loads and your block drops
   Store.load().then((heap) => {
     for (const rec of heap) { if (rec.f === 'ico') rec.f = 'd13'; if (rec.p && rec.q && FAMILIES[rec.f]) place(rec); }
     const who = !Store.shared ? '' : heap.length ? `${heap.length} ${heap.length === 1 ? 'block' : 'blocks'} on the shore so far.` : 'You are the first on the shore.';
     // every visit drops a block of its own
-    const [x, z] = randomShore(); focus = [x, z]; look(x, z, 55);
+    const [x, z] = focus;
     drop('tetra', x, z, true); setStatus(`Welcome. Your tetrapod is dropping onto the shore. ${who}`.trim());
     // other visitors' blocks appear as they arrive
     setInterval(() => Store.newer().then((rows) => { for (const rec of rows) if (!mineIds.has(rec.id) && FAMILIES[rec.f]) place(rec); }), 60000);
