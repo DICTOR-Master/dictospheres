@@ -1,10 +1,10 @@
-// Drop us a tetrapod (DICTO, 2026-10-14; PLAN-TETRAPODS.md). The real coast at Tannowa, Misaki (Osaka Bay), from GSI elevation data,
+// Drop us a tetrapod (DICTO, 2026-10-14; PLAN-TETRAPODS.md). Three real stretches of the Misaki coast (Osaka Bay), joined, from GSI elevation data,
 // with its breakwater blocks taken away: each visit drops a standard tetrapod onto the shore, and a visitor may add up to 3 more of any
 // family. Rocks and pines are placed from the terrain. Blocks fall with real gravity and settle on the land, the sea floor and each other; older blocks grow algae.
 // The heap is stored through Store (on this device for now; a shared Supabase table later, same interface). DICTO · dictospheres.com
 (function () {
   'use strict';
-  const T = window.TANNOWA, PHI = (1 + Math.sqrt(5)) / 2;
+  const T = window.COAST, PHI = (1 + Math.sqrt(5)) / 2;
   const W = T.w, H = T.h, CELL = T.cell, SX = (W - 1) * CELL, SZ = (H - 1) * CELL;
   const raw = atob(T.heights), heights = new Float32Array(W * H);
   for (let i = 0; i < W * H; i++) { let v = raw.charCodeAt(2 * i) | (raw.charCodeAt(2 * i + 1) << 8); if (v > 32767) v -= 65536; heights[i] = v / 10; }
@@ -21,9 +21,10 @@
     tetra: { name: 'Tetrahedral', legs: [[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]].map(norm), r: 0.34 },
     octa: { name: 'Octahedral', legs: [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]], r: 0.28 },
     cube: { name: 'Cube corners', legs: [-1, 1].flatMap((a) => [-1, 1].flatMap((b) => [-1, 1].map((c) => norm([a, b, c])))), r: 0.24 },
-    ico: { name: 'Icosahedral', legs: [-1, 1].flatMap((a) => [-1, 1].flatMap((b) => [[0, a, b * PHI], [a, b * PHI, 0], [b * PHI, 0, a]])).map(norm), r: 0.18 },
+    // DICTO's Dodeca-13 (filled cluster) takes the 12-arm place: arms along the centre dodecahedron's face normals, edge D13 m
+    d13: { name: 'DICTO Dodeca-13', legs: [-1, 1].flatMap((a) => [-1, 1].flatMap((b) => [[0, a * PHI, b], [a * PHI, b, 0], [b, 0, a * PHI]])).map(norm), r: 0 },
   };
-  const LEG = 2.2;
+  const LEG = 2.2, D13 = 0.7, D13_IN = D13 * 1.113516;   // dodecahedron inradius = 1.113516 × edge
   const MAX_EXTRAS = 3;
 
   // ---- storage: on this device for now; Supabase replaces load/add with the same shapes ----
@@ -39,21 +40,29 @@
   // ---- scene ----
   const canvas = document.getElementById('sea');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  renderer.setPixelRatio(Math.min(3, window.devicePixelRatio || 1));
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xbfd3dc);
-  scene.fog = new THREE.Fog(0xbfd3dc, 900, 2200);
+  scene.fog = new THREE.Fog(0xbfd3dc, 1000, 3200);
   const camera = new THREE.PerspectiveCamera(40, 1, 0.5, 4000);
   scene.add(new THREE.HemisphereLight(0xe8f0f2, 0x3e4a3a, 0.55));
   const sun = new THREE.DirectionalLight(0xfff1dc, 1.15); sun.position.set(-260, 300, -320); scene.add(sun);
 
   // terrain mesh, coloured by height and slope
-  const tg = new THREE.PlaneGeometry(SX, SZ, W - 1, H - 1); tg.rotateX(-Math.PI / 2);
+  // the terrain mesh at twice the data's resolution, curved smoothly between the data points (Catmull-Rom)
+  const UP = 2, FW = (W - 1) * UP + 1, FH = (H - 1) * UP + 1;
+  const cr = (p0, p1, p2, p3, t) => p1 + 0.5 * t * (p2 - p0 + t * (2 * p0 - 5 * p1 + 4 * p2 - p3 + t * (3 * (p1 - p2) + p3 - p0)));
+  function hFine(rf, cf) {
+    const r0 = Math.floor(rf), c0 = Math.floor(cf), tr = rf - r0, tc = cf - c0, rows = [];
+    for (let k = -1; k <= 2; k++) rows.push(cr(hAt(r0 + k, c0 - 1), hAt(r0 + k, c0), hAt(r0 + k, c0 + 1), hAt(r0 + k, c0 + 2), tc));
+    return cr(rows[0], rows[1], rows[2], rows[3], tr);
+  }
+  const tg = new THREE.PlaneGeometry(SX, SZ, FW - 1, FH - 1); tg.rotateX(-Math.PI / 2);
   const tp = tg.attributes.position, tcol = new Float32Array(tp.count * 3), col = new THREE.Color();
-  const SAND = new THREE.Color(0xcdbb8e), WETSAND = new THREE.Color(0x8f8366), SEABED = new THREE.Color(0x5d6f63), GRASS = new THREE.Color(0x5f7d45), WOOD = new THREE.Color(0x2f4a2c), ROCK = new THREE.Color(0x77736b), TOWN = new THREE.Color(0x9a948a);
+  const SAND = new THREE.Color(0xcdbb8e), WETSAND = new THREE.Color(0x8f8366), SEABED = new THREE.Color(0x9a9a78), GRASS = new THREE.Color(0x5f7d45), WOOD = new THREE.Color(0x2f4a2c), ROCK = new THREE.Color(0x77736b), TOWN = new THREE.Color(0x9a948a);
   for (let i = 0; i < tp.count; i++) {
-    const c = i % W, r = Math.floor(i / W), y = hAt(r, c); tp.setY(i, y);
-    const slope = Math.hypot(hAt(r, c + 1) - hAt(r, c - 1), hAt(r + 1, c) - hAt(r - 1, c)) / (2 * CELL);
+    const cf = (i % FW) / UP, rf = Math.floor(i / FW) / UP, y = hFine(rf, cf); tp.setY(i, y);
+    const e = 0.5, slope = Math.hypot(hFine(rf, cf + e) - hFine(rf, cf - e), hFine(rf + e, cf) - hFine(rf - e, cf)) / (2 * e * CELL);
     if (y < -0.3) col.copy(SEABED).lerp(WETSAND, Math.max(0, 1 + y / 3));
     else if (y < 1.6) col.copy(WETSAND).lerp(SAND, (y + 0.3) / 1.9);
     else if (slope > 0.55) col.copy(ROCK);
@@ -65,8 +74,31 @@
   const terrain = new THREE.Mesh(tg, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0 }));
   scene.add(terrain);
   // the sea: a gently moving surface over a much wider area
-  const sg = new THREE.PlaneGeometry(SX * 3, SZ * 3, 90, 60); sg.rotateX(-Math.PI / 2);
-  const sea = new THREE.Mesh(sg, new THREE.MeshStandardMaterial({ color: 0x2f6f86, roughness: 0.62, metalness: 0.02, transparent: true, opacity: 0.8 }));
+  // beyond the data: the land carries on to the back line, rising into hills, and the sea floor carries on out to sea.
+  // A coarse skirt under and around the terrain, continued from its edges.
+  // Its grid lines fall exactly on the terrain's edges, and inside them it drops well below, so it never shows through the real coast.
+  const KX = 12000, KZ = 12000;   // 6 km each way, past the haze
+  const axis = (half, K) => { const a = []; for (let v = -K / 2; v < -half - 1; v += 40) a.push(v); a.push(-half); for (let v = -half + 40; v < half - 1; v += 40) a.push(v); a.push(half); for (let v = half + 40; v <= K / 2; v += 40) a.push(v); return a; };
+  const XS = axis(SX / 2, KX), ZS = axis(SZ / 2, KZ), kpos = [], kidx = [];
+  for (const z of ZS) for (const x of XS) kpos.push(x, 0, z);
+  for (let j = 0; j + 1 < ZS.length; j++) for (let i = 0; i + 1 < XS.length; i++) { const a0 = j * XS.length + i, b0 = a0 + 1, c0 = a0 + XS.length, d0 = c0 + 1; kidx.push(a0, c0, b0, b0, c0, d0); }
+  const kg = new THREE.BufferGeometry(); kg.setAttribute('position', new THREE.Float32BufferAttribute(kpos, 3)); kg.setIndex(kidx);
+  const kp = kg.attributes.position, kcol = new Float32Array(kp.count * 3);
+  for (let i = 0; i < kp.count; i++) {
+    const x = kp.getX(i), z = kp.getZ(i), cx = Math.max(-SX / 2, Math.min(SX / 2, x)), cz = Math.max(-SZ / 2, Math.min(SZ / 2, z));
+    const out = Math.hypot(x - cx, z - cz), base = heightAtXZ(cx, cz);
+    let y = base;
+    // behind the land: wooded hills rising to ridges, so there is never empty space behind it
+    if (base > 0.5) y += Math.min(out, 2500) * 0.09 * (1 + 0.45 * Math.sin(x * 0.0021) * Math.cos(z * 0.0017)) + 18 * Math.sin(x * 0.006 + z * 0.002) * Math.min(1, out / 300) + 7 * Math.sin(x * 0.019 - z * 0.011) * Math.min(1, out / 150);
+    if (Math.abs(x) < SX / 2 - 1 && Math.abs(z) < SZ / 2 - 1) y = Math.min(base, 0) - 6;   // under the real terrain
+    kp.setY(i, y);
+    if (y < -0.3) col.copy(SEABED).lerp(SAND, Math.max(0, 1 + y / 3.5) * 0.6); else if (y < 1.6) col.copy(SAND); else col.copy(GRASS).lerp(WOOD, Math.min(1, (y - 6) / 30)).lerp(WOOD, 0.3 * (0.5 + 0.5 * Math.sin(x * 0.05) * Math.sin(z * 0.043)));
+    kcol.set([col.r, col.g, col.b], i * 3);
+  }
+  kg.setAttribute('color', new THREE.BufferAttribute(kcol, 3)); kg.computeVertexNormals();
+  const skirt = new THREE.Mesh(kg, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0 })); scene.add(skirt);
+  const sg = new THREE.PlaneGeometry(KX, KZ, 150, 100); sg.rotateX(-Math.PI / 2);
+  const sea = new THREE.Mesh(sg, new THREE.MeshStandardMaterial({ color: 0x2f7f8e, roughness: 0.62, metalness: 0.02, transparent: true, opacity: 0.62 }));
   scene.add(sea);
   const seaBase = Float32Array.from(sg.attributes.position.array);
 
@@ -88,14 +120,23 @@
 
   // ---- a tetrapod: mesh + body ----
   const ALGAE = new THREE.Color(0x3d7a49), WET = new THREE.Color(0x5f6b5a), CONCRETE = new THREE.Color(0xbab6ad);
+  let d13geo = null;
+  function dodeca13Geometry() {   // flat-shaded triangles from DICTO's 152 faces
+    if (d13geo) return d13geo.clone();
+    const V = window.DODECA13.v, pos = [];
+    for (const f of window.DODECA13.f) for (let k = 1; k + 1 < f.length; k++) for (const j of [f[0], f[k], f[k + 1]]) pos.push(V[3 * j] * D13, V[3 * j + 1] * D13, V[3 * j + 2] * D13);
+    d13geo = new THREE.BufferGeometry(); d13geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); d13geo.computeVertexNormals();
+    return d13geo.clone();
+  }
   function blockMesh(fam) {
     const F = FAMILIES[fam], g = new THREE.Group(), r = F.r * LEG, parts = [];
+    if (fam === 'd13') { const m = new THREE.Mesh(dodeca13Geometry(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true })); g.add(m); return { g, parts: [m] }; }
     for (const d of F.legs) {
-      const geo = new THREE.CylinderGeometry(r * 0.52, r, LEG, 14, 4); geo.translate(0, LEG / 2, 0);
+      const geo = new THREE.CylinderGeometry(r * 0.52, r, LEG, 28, 6); geo.translate(0, LEG / 2, 0);
       const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92 }));
       m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(...d)); g.add(m); parts.push(m);
     }
-    const hub = new THREE.Mesh(new THREE.IcosahedronGeometry(r * 1.05, 2), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92 }));
+    const hub = new THREE.Mesh(new THREE.IcosahedronGeometry(r * 1.05, 3), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92 }));
     g.add(hub); parts.push(hub);
     return { g, parts };
   }
@@ -118,8 +159,11 @@
   }
   function blockBody(fam, mass) {
     const F = FAMILIES[fam], r = F.r * LEG, b = new CANNON.Body({ mass, material: mat });
-    b.addShape(new CANNON.Sphere(r * 1.0));
-    for (const d of F.legs) for (const [t, s] of [[0.35, 0.9], [0.65, 0.75], [0.9, 0.58]]) b.addShape(new CANNON.Sphere(r * s), new CANNON.Vec3(d[0] * LEG * t, d[1] * LEG * t, d[2] * LEG * t));
+    if (fam === 'd13') {   // the centre and the 12 outer dodecahedra as spheres between their in- and circumradius
+      b.addShape(new CANNON.Sphere(D13_IN * 1.08));
+      for (const d of F.legs) b.addShape(new CANNON.Sphere(D13_IN * 1.08), new CANNON.Vec3(d[0] * 2 * D13_IN, d[1] * 2 * D13_IN, d[2] * 2 * D13_IN));
+    } else b.addShape(new CANNON.Sphere(r * 1.0));
+    if (fam !== 'd13') for (const d of F.legs) for (const [t, s] of [[0.35, 0.9], [0.65, 0.75], [0.9, 0.58]]) b.addShape(new CANNON.Sphere(r * s), new CANNON.Vec3(d[0] * LEG * t, d[1] * LEG * t, d[2] * LEG * t));
     b.allowSleep = true; b.sleepSpeedLimit = 0.25; b.sleepTimeLimit = 0.8; b.linearDamping = 0.05; b.angularDamping = 0.15;
     return b;
   }
@@ -256,11 +300,11 @@
   });
 
   // ---- start: the heap, then this visit's own block ----
-  for (const rec of Store.load()) if (rec.p && rec.q && FAMILIES[rec.f]) place(rec);
+  for (const rec of Store.load()) { if (rec.f === 'ico') rec.f = 'd13'; if (rec.p && rec.q && FAMILIES[rec.f]) place(rec); }
   if (!day.auto) {
     day.auto = true; Store.setDay(day);
     const [x, z] = randomShore(); focus = [x, z]; look(x, z, 55);
-    drop('tetra', x, z, true); setStatus('Welcome. Your tetrapod is dropping onto the shore at Tannowa.');
+    drop('tetra', x, z, true); setStatus('Welcome. Your tetrapod is dropping onto the shore.');
   } else { look(...focus, 160); setStatus('Welcome back. Your block for today is already on the shore; you can add extras.'); }
   renderPanel();
 
@@ -284,5 +328,5 @@
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
-  window.__tetrapods = { blocks, world, rocks: rocks.length, pines: pines.length };   // for tests
+  window.__tetrapods = { blocks, world, rocks: rocks.length, pines: pines.length, sea, skirt, terrain };   // for tests
 })();
