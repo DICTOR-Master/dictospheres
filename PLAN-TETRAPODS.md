@@ -12,6 +12,15 @@ and it falls and settles on the shared heap that every earlier visitor's tetrapo
 - **Algae:** the older a tetrapod, the greener it grows, so the heap shows its history (the first visitors' at the bottom, mossy).
 - **Place:** its own page (e.g. /tetrapods), with a card on the home page.
 
+## The coast (DICTO, 2026-10-14)
+
+- A real stretch of **Osaka Bay** coast, its land and shore copied from Japan's official elevation data (GSI elevation tiles, free with
+  credit, "出典：国土地理院"), softly styled: sand, rocks, green slopes, a moving sea. **No tetrapods in the scene to begin with**: the
+  visitors place them.
+- Proposed stretch: the natural southern coast around **Misaki and Tannowa** (Sennan), rocky points, small beaches, wooded hills, and
+  breakwaters that in real life are lined with tetrapods. Alternative: Suma (Kobe).
+- **One standard block drops in with each visit; a visitor may add up to 3 more** of any family.
+
 ## How it works
 
 - The visitor's device simulates the fall (rigid bodies, gravity, collisions; a small physics library from a CDN). When the piece
@@ -22,8 +31,7 @@ and it falls and settles on the shared heap that every earlier visitor's tetrapo
 
 ## Open (DICTO's choice)
 
-- **Storage for the shared heap:** (1) Vercel's built-in storage on the dictospheres project (recommended), (2) Supabase, or
-  (3) no sharing at first (each visitor's own heap).
+- **Storage:** Supabase, a new project (DICTO creates it and sends the project URL and anon key).
 
 ## Stages
 
