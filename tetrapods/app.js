@@ -1,6 +1,6 @@
 // Drop us a tetrapod (DICTO, 2026-10-14; PLAN-TETRAPODS.md). The real coast at Tannowa, Misaki (Osaka Bay), from GSI elevation data,
 // with its breakwater blocks taken away: each visit drops a standard tetrapod onto the shore, and a visitor may add up to 3 more of any
-// family. Blocks fall with real gravity and settle on the land, the sea floor and each other; older blocks grow algae.
+// family. Rocks and pines are placed from the terrain. Blocks fall with real gravity and settle on the land, the sea floor and each other; older blocks grow algae.
 // The heap is stored through Store (on this device for now; a shared Supabase table later, same interface). DICTO · dictospheres.com
 (function () {
   'use strict';
@@ -66,7 +66,7 @@
   scene.add(terrain);
   // the sea: a gently moving surface over a much wider area
   const sg = new THREE.PlaneGeometry(SX * 3, SZ * 3, 90, 60); sg.rotateX(-Math.PI / 2);
-  const sea = new THREE.Mesh(sg, new THREE.MeshStandardMaterial({ color: 0x2f6f86, roughness: 0.3, metalness: 0.08, transparent: true, opacity: 0.8 }));
+  const sea = new THREE.Mesh(sg, new THREE.MeshStandardMaterial({ color: 0x2f6f86, roughness: 0.62, metalness: 0.02, transparent: true, opacity: 0.8 }));
   scene.add(sea);
   const seaBase = Float32Array.from(sg.attributes.position.array);
 
@@ -162,9 +162,63 @@
     const e = 12, gx = heightAtXZ(x + e, z) - heightAtXZ(x - e, z), gz = heightAtXZ(x, z + e) - heightAtXZ(x, z - e), l = Math.hypot(gx, gz) || 1;
     return [-gx / l, -gz / l];
   }
+  // ---- rocks and pines: placed from the terrain with a fixed seed, so every visitor sees the same coast ----
+  let seed = 20261014;
+  const rand = () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const slopeAt = (r, c) => Math.hypot(hAt(r, c + 1) - hAt(r, c - 1), hAt(r + 1, c) - hAt(r - 1, c)) / (2 * CELL);
+  const nearSea = (r, c, k) => { for (let i = -k; i <= k; i++) for (let j = -k; j <= k; j++) if (hAt(r + i, c + j) < -0.3) return true; return false; };
+  const m4 = new THREE.Matrix4(), qq = new THREE.Quaternion(), ee = new THREE.Euler(), vp = new THREE.Vector3(), vs = new THREE.Vector3(), tint = new THREE.Color();
+  // rocks: boulders along the waterline (heavier where the shore is steep) and outcrops on steep ground. Shore rocks are solid,
+  // so blocks can come to rest on them.
+  const rocks = [];
+  for (let r = 2; r < H - 2; r++) for (let c = 2; c < W - 2; c++) {
+    const y = hAt(r, c), s = slopeAt(r, c);
+    let p = 0;
+    if (y > -1.5 && y < 2.5 && nearSea(r, c, 1)) p = 0.10 + Math.min(0.35, s * 0.6);
+    else if (y >= 2.5 && s > 0.55) p = 0.05;
+    if (rand() < p) { const n = 1 + Math.floor(rand() * 3); for (let k = 0; k < n; k++) rocks.push([r + rand() - 0.5, c + rand() - 0.5, 0.5 + rand() * rand() * 1.8]); }
+  }
+  const rockMesh = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ roughness: 1, flatShading: true }), rocks.length);
+  rocks.forEach(([r, c, size], i) => {
+    const x = -SX / 2 + c * CELL, z = -SZ / 2 + r * CELL, y = heightAtXZ(x, z) - size * 0.3;
+    vp.set(x, y, z); vs.set(size * (0.9 + rand() * 0.5), size * (0.55 + rand() * 0.35), size * (0.9 + rand() * 0.5));
+    qq.setFromEuler(ee.set(rand() * 0.6, rand() * 6.28, rand() * 0.6)); rockMesh.setMatrixAt(i, m4.compose(vp, qq, vs));
+    rockMesh.setColorAt(i, tint.setHSL(0.09 + rand() * 0.05, 0.06 + rand() * 0.06, 0.36 + rand() * 0.18));
+    if (y < 4) { const b = new CANNON.Body({ mass: 0, material: mat }); b.addShape(new CANNON.Sphere(size * 0.8)); b.position.set(x, y, z); world.addBody(b); }
+  });
+  scene.add(rockMesh);
+  // pines: Japanese black pines, a leaning trunk and flat layered crowns; a seaside row just above the shore and woods on the hills,
+  // none on flat town ground or bare rock
+  const pines = [];
+  for (let r = 2; r < H - 2; r++) for (let c = 2; c < W - 2; c++) {
+    const y = hAt(r, c), s = slopeAt(r, c);
+    if (y < 2.2 || s > 0.75 || (y < 8 && s < 0.08)) continue;
+    const p = nearSea(r, c, 3) ? 0.16 : Math.min(0.32, 0.04 + (y - 6) * 0.006);
+    if (rand() < p) pines.push([r + rand() - 0.5, c + rand() - 0.5, 0.7 + rand() * 0.6]);
+  }
+  const LAYERS = 3;
+  const trunkGeo = new THREE.CylinderGeometry(0.16, 0.3, 1, 6); trunkGeo.translate(0, 0.5, 0);
+  const trunks = new THREE.InstancedMesh(trunkGeo, new THREE.MeshStandardMaterial({ color: 0x5b4636, roughness: 1 }), pines.length);
+  const crowns = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ roughness: 1, flatShading: true }), pines.length * LAYERS);
+  const lean = new THREE.Vector3();
+  pines.forEach(([r, c, k], i) => {
+    const x = -SX / 2 + c * CELL, z = -SZ / 2 + r * CELL, y = heightAtXZ(x, z), tall = (7 + rand() * 5) * k;
+    const n = shoreNormal(x, z), tilt = nearSea(Math.round(r), Math.round(c), 3) ? 0.18 + rand() * 0.15 : rand() * 0.08;   // shore pines lean out to sea
+    qq.setFromUnitVectors(new THREE.Vector3(0, 1, 0), lean.set(n[0] * tilt, 1, n[1] * tilt).normalize());
+    trunks.setMatrixAt(i, m4.compose(vp.set(x, y - 0.3, z), qq, vs.set(k, tall, k)));
+    for (let j = 0; j < LAYERS; j++) {
+      const h = tall * (0.62 + j * 0.15), w = (3.2 - j * 0.8) * k * (0.85 + rand() * 0.3);
+      vp.copy(lean).multiplyScalar(h).add(new THREE.Vector3(x + (rand() - 0.5) * w * 0.5, y - 0.3, z + (rand() - 0.5) * w * 0.5));
+      crowns.setMatrixAt(i * LAYERS + j, m4.compose(vp, qq.setFromEuler(ee.set(0, rand() * 6.28, 0)), vs.set(w, w * 0.38, w * (0.8 + rand() * 0.3))));
+      crowns.setColorAt(i * LAYERS + j, tint.setHSL(0.30 + rand() * 0.05, 0.32 + rand() * 0.12, 0.17 + j * 0.03 + rand() * 0.05));
+    }
+  });
+  scene.add(trunks, crowns);
+
   // ---- camera ----
   const controls = new THREE.OrbitControls(camera, canvas);
-  controls.enableDamping = true; controls.maxPolarAngle = Math.PI / 2 - 0.06; controls.minDistance = 8; controls.maxDistance = 900;
+  controls.enableDamping = true; window.__cam = controls;   // for tests
+  controls.maxPolarAngle = Math.PI / 2 - 0.06; controls.minDistance = 8; controls.maxDistance = 900;
   function look(x, z, d = 60) {
     const y = Math.max(0, heightAtXZ(x, z));
     controls.target.set(x, y + 1, z); const n = shoreNormal(x, z); camera.position.set(x + n[0] * d, y + d * 0.6, z + n[1] * d); controls.update();
@@ -230,5 +284,5 @@
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
-  window.__tetrapods = { blocks, world };   // for tests
+  window.__tetrapods = { blocks, world, rocks: rocks.length, pines: pines.length };   // for tests
 })();
