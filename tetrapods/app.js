@@ -26,6 +26,8 @@
     octa: { name: 'Octahedral', legs: [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]], r: 0.28 },
     cube: { name: 'Cube corners', legs: [-1, 1].flatMap((a) => [-1, 1].flatMap((b) => [-1, 1].map((c) => norm([a, b, c])))), r: 0.24 },
     // DICTO's Dodeca-13 (filled cluster) takes the 12-arm place: arms along the centre dodecahedron's face normals, edge D13 m
+    to5: { name: 'Five truncated octahedra', piece: 'to5' },   // DICTO's tetrapod pieces: each one block that fills space by parallel copies
+    rd4: { name: 'Four rhombic dodecahedra', piece: 'rd4' },
     d13: { name: 'DICTO Dodeca-13', legs: [-1, 1].flatMap((a) => [-1, 1].flatMap((b) => [[0, a * PHI, b], [a * PHI, b, 0], [b, 0, a * PHI]])).map(norm), r: 0 },
   };
   const LEG = 2.2, D13 = 0.7, D13_IN = D13 * 1.113516;   // dodecahedron inradius = 1.113516 × edge
@@ -80,7 +82,7 @@
   // ---- scene ----
   const canvas = document.getElementById('sea');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-  renderer.setPixelRatio(Math.min(3, window.devicePixelRatio || 1));
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xbfd3dc);
   scene.fog = new THREE.Fog(0xbfd3dc, 1000, 3200);
@@ -168,26 +170,59 @@
   function stepWorld(dt) { const ce = console.error; console.error = () => {}; try { world.step(1 / 60, dt, 12); } finally { console.error = ce; } }
 
   // ---- a tetrapod: mesh + body ----
-  const ALGAE = new THREE.Color(0x3d7a49), WET = new THREE.Color(0x5f6b5a), CONCRETE = new THREE.Color(0xbab6ad);
-  let d13geo = null;
-  function dodeca13Geometry() {   // flat-shaded triangles from DICTO's 152 faces
-    if (d13geo) return d13geo.clone();
-    const V = window.DODECA13.v, pos = [];
-    for (const f of window.DODECA13.f) for (let k = 1; k + 1 < f.length; k++) for (const j of [f[0], f[k], f[k + 1]]) pos.push(V[3 * j] * D13, V[3 * j + 1] * D13, V[3 * j + 2] * D13);
-    d13geo = new THREE.BufferGeometry(); d13geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); d13geo.computeVertexNormals();
-    return d13geo.clone();
+  const ALGAE = new THREE.Color(0x3d7a49), WET = new THREE.Color(0x6d7767), CONCRETE = new THREE.Color(0xd2cec6);
+  // concrete: a pale cast surface with aggregate specks and small air pores, mapped flat onto each face; the algae tint sits on top
+  const concreteTex = (() => {
+    const N = 256, cv = document.createElement('canvas'); cv.width = cv.height = N; const x = cv.getContext('2d');
+    let sd = 7; const rnd = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+    x.fillStyle = '#e9e6df'; x.fillRect(0, 0, N, N);
+    for (let k = 0; k < 9000; k++) { const v = 205 + Math.floor(rnd() * 50); x.fillStyle = `rgb(${v},${v - 2},${v - 6})`; x.fillRect(rnd() * N, rnd() * N, 1 + rnd() * 2, 1 + rnd() * 2); }
+    for (let k = 0; k < 420; k++) { const v = 150 + Math.floor(rnd() * 70); x.fillStyle = `rgba(${v},${v - 4},${v - 10},0.8)`; x.beginPath(); x.arc(rnd() * N, rnd() * N, 0.8 + rnd() * 2.2, 0, 6.3); x.fill(); }
+    for (let k = 0; k < 160; k++) { x.fillStyle = 'rgba(70,66,60,0.75)'; x.beginPath(); x.arc(rnd() * N, rnd() * N, 0.6 + rnd() * 1.4, 0, 6.3); x.fill(); }
+    const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; return t;
+  })();
+  const concrete = () => new THREE.MeshStandardMaterial({ vertexColors: true, map: concreteTex, bumpMap: concreteTex, bumpScale: 0.035, roughness: 0.96, metalness: 0, flatShading: false });
+  function boxUV(geo, metres = 1.6) {   // each vertex takes the two coordinates across its normal's main axis
+    const P = geo.attributes.position, N = geo.attributes.normal, uv = new Float32Array(P.count * 2);
+    for (let i = 0; i < P.count; i++) {
+      const ax = Math.abs(N.getX(i)), ay = Math.abs(N.getY(i)), az = Math.abs(N.getZ(i)), x = P.getX(i) / metres, y = P.getY(i) / metres, z = P.getZ(i) / metres;
+      const [u, v] = ax >= ay && ax >= az ? [y, z] : ay >= az ? [x, z] : [x, y]; uv[2 * i] = u; uv[2 * i + 1] = v;
+    }
+    geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); return geo;
+  }
+  const flatCache = {};
+  function flatGeometry(key, V, F, scale) {   // flat-shaded triangles from a piece's faces (each face its own corners, so edges stay crisp)
+    if (!flatCache[key]) {
+      const pos = [];
+      for (const f of F) for (let k = 1; k + 1 < f.length; k++) for (const j of [f[0], f[k], f[k + 1]]) pos.push(V[3 * j] * scale, V[3 * j + 1] * scale, V[3 * j + 2] * scale);
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.computeVertexNormals(); flatCache[key] = boxUV(g);
+    }
+    return flatCache[key].clone();
+  }
+  const concreteMat = concrete();   // one material for every block (each block's algae lives in its own vertex colours)
+  function merge(geos) {   // several geometries into one (non-indexed), so a block is drawn in one go
+    const pos = [], nor = [], uv = [];
+    for (const g0 of geos) { const g = g0.index ? g0.toNonIndexed() : g0; pos.push(...g.attributes.position.array); nor.push(...g.attributes.normal.array); uv.push(...g.attributes.uv.array); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    return g;
   }
   function blockMesh(fam) {
-    const F = FAMILIES[fam], g = new THREE.Group(), r = F.r * LEG, parts = [];
-    if (fam === 'd13') { const m = new THREE.Mesh(dodeca13Geometry(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true })); g.add(m); return { g, parts: [m] }; }
-    for (const d of F.legs) {
-      const geo = new THREE.CylinderGeometry(r * 0.52, r, LEG, 28, 6); geo.translate(0, LEG / 2, 0);
-      const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92 }));
-      m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(...d)); g.add(m); parts.push(m);
+    const F = FAMILIES[fam];
+    if (!flatCache[fam]) {
+      if (fam === 'd13') flatGeometry('d13', window.DODECA13.v, window.DODECA13.f, D13);
+      else if (F.piece) flatGeometry(fam, window.TPIECES[F.piece].v, window.TPIECES[F.piece].f, 1);
+      else {   // legs and hub, merged
+        const r = F.r * LEG, m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), parts = [];
+        for (const d of F.legs) {
+          const geo = new THREE.CylinderGeometry(r * 0.52, r, LEG, 28, 6).translate(0, LEG / 2, 0);
+          geo.applyMatrix4(m4.makeRotationFromQuaternion(q.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(...d)))); parts.push(boxUV(geo));
+        }
+        parts.push(boxUV(new THREE.IcosahedronGeometry(r * 1.05, 3)));
+        flatCache[fam] = merge(parts);
+      }
     }
-    const hub = new THREE.Mesh(new THREE.IcosahedronGeometry(r * 1.05, 3), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92 }));
-    g.add(hub); parts.push(hub);
-    return { g, parts };
+    const g = new THREE.Group(), m = new THREE.Mesh(flatCache[fam].clone(), concreteMat); g.add(m);
+    return { g, parts: [m] };
   }
   function paint(block, ageYears) {
     const up = new THREE.Vector3(0, 1, 0), n = new THREE.Vector3(), c = new THREE.Color(), q = new THREE.Quaternion();
@@ -211,8 +246,10 @@
     if (fam === 'd13') {   // the centre and the 12 outer dodecahedra as spheres between their in- and circumradius
       b.addShape(new CANNON.Sphere(D13_IN * 1.08));
       for (const d of F.legs) b.addShape(new CANNON.Sphere(D13_IN * 1.08), new CANNON.Vec3(d[0] * 2 * D13_IN, d[1] * 2 * D13_IN, d[2] * 2 * D13_IN));
+    } else if (F.piece) {   // DICTO's pieces: one sphere in each cell
+      const P = window.TPIECES[F.piece]; for (const c of P.cells) b.addShape(new CANNON.Sphere(P.r), new CANNON.Vec3(...c));
     } else b.addShape(new CANNON.Sphere(r * 1.0));
-    if (fam !== 'd13') for (const d of F.legs) for (const [t, s] of [[0.35, 0.9], [0.65, 0.75], [0.9, 0.58]]) b.addShape(new CANNON.Sphere(r * s), new CANNON.Vec3(d[0] * LEG * t, d[1] * LEG * t, d[2] * LEG * t));
+    if (fam !== 'd13' && !F.piece) for (const d of F.legs) for (const [t, s] of [[0.35, 0.9], [0.65, 0.75], [0.9, 0.58]]) b.addShape(new CANNON.Sphere(r * s), new CANNON.Vec3(d[0] * LEG * t, d[1] * LEG * t, d[2] * LEG * t));
     b.allowSleep = true; b.sleepSpeedLimit = 0.25; b.sleepTimeLimit = 0.8; b.linearDamping = 0.05; b.angularDamping = 0.15;
     return b;
   }
@@ -262,8 +299,8 @@
   const slopeAt = (r, c) => Math.hypot(hAt(r, c + 1) - hAt(r, c - 1), hAt(r + 1, c) - hAt(r - 1, c)) / (2 * CELL);
   const nearSea = (r, c, k) => { for (let i = -k; i <= k; i++) for (let j = -k; j <= k; j++) if (hAt(r + i, c + j) < -0.3) return true; return false; };
   const m4 = new THREE.Matrix4(), qq = new THREE.Quaternion(), ee = new THREE.Euler(), vp = new THREE.Vector3(), vs = new THREE.Vector3(), tint = new THREE.Color();
-  // rocks: boulders along the waterline (heavier where the shore is steep) and outcrops on steep ground. Shore rocks are solid,
-  // so blocks can come to rest on them.
+  // rocks: boulders along the waterline (heavier where the shore is steep) and outcrops on steep ground (scenery: blocks rest on the
+  // ground and on each other)
   const rocks = [];
   for (let r = 2; r < H - 2; r++) for (let c = 2; c < W - 2; c++) {
     const y = hAt(r, c), s = slopeAt(r, c);
@@ -281,7 +318,6 @@
     vp.set(x, y, z); vs.set(size * (0.9 + rand() * 0.5), size * (0.55 + rand() * 0.35), size * (0.9 + rand() * 0.5));
     qq.setFromEuler(ee.set(rand() * 0.6, rand() * 6.28, rand() * 0.6)); rockMesh.setMatrixAt(i, m4.compose(vp, qq, vs));
     rockMesh.setColorAt(i, tint.setHSL(0.09 + rand() * 0.05, 0.06 + rand() * 0.06, 0.36 + rand() * 0.18));
-    if (y < 4 && Math.abs(x) < SX / 2) { const b = new CANNON.Body({ mass: 0, material: mat }); b.addShape(new CANNON.Sphere(size * 0.8)); b.position.set(x, y, z); world.addBody(b); }
   });
   scene.add(rockMesh);
   // pines: Japanese black pines, a leaning trunk and flat layered crowns; a seaside row just above the shore and woods on the hills,
@@ -297,7 +333,7 @@
   const LAYERS = 3;
   const trunkGeo = new THREE.CylinderGeometry(0.16, 0.3, 1, 6); trunkGeo.translate(0, 0.5, 0);
   const trunks = new THREE.InstancedMesh(trunkGeo, new THREE.MeshStandardMaterial({ color: 0x5b4636, roughness: 1 }), pines.length);
-  const crowns = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ roughness: 1, flatShading: true }), pines.length * LAYERS);
+  const crowns = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ roughness: 1, flatShading: true }), pines.length * LAYERS);
   const lean = new THREE.Vector3();
   pines.forEach(([r, c, k], i) => {
     const x = -SX / 2 + c * CELL, z = -SZ / 2 + r * CELL, y = groundAt(x, z), tall = (7 + rand() * 5) * k, cr = (reflX(x) + SX / 2) / CELL;
@@ -372,7 +408,7 @@
   let last = performance.now();
   function frame(now) {
     const dt = Math.min(0.2, (now - last) / 1000); last = now;   // a slow device takes more physics steps per frame and keeps real time
-    stepWorld(dt);
+    if (blocks.some((b) => b.settling)) stepWorld(dt);   // the physics rests while every block is still
     for (const b of blocks) {
       if (!b.settling) continue;
       b.sim += dt;   // simulated seconds, so a slow device never freezes a block in mid-air
