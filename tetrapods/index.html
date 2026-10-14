@@ -16,8 +16,9 @@
 html, body { height: 100%; margin: 0; background: #bfd3dc; color: var(--fg); font: 16px/1.45 var(--body); overflow: hidden; }
 #sea { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 .title { position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); left: 16px; right: 16px; pointer-events: none; color: #14222a; }
-.title h1 { font: 800 clamp(30px, 6vw, 52px)/.9 var(--display); margin: 0; text-shadow: 0 1px 0 rgba(255,255,255,.6); }
-.title p { margin: 4px 0 0; font-size: 14px; max-width: 46ch; text-shadow: 0 1px 0 rgba(255,255,255,.7); }
+.title { --halo: #d6f0fb; }   /* a light-blue edge round the lettering so it stands out on sea and hills alike */
+.title h1 { font: 800 clamp(30px, 6vw, 52px)/.9 var(--display); margin: 0; -webkit-text-stroke: 5px var(--halo); paint-order: stroke fill; text-shadow: 0 0 6px var(--halo); }
+.title p { margin: 6px 0 0; font-size: 14px; font-weight: 700; max-width: 46ch; -webkit-text-stroke: 3px var(--halo); paint-order: stroke fill; text-shadow: 0 0 4px var(--halo); }
 .panel { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px)); background: var(--panel); border-top: 1px solid var(--line); display: grid; gap: 10px; backdrop-filter: blur(6px); }
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .chip, .btn { min-height: 48px; padding: 0 16px; border-radius: 24px; border: 1px solid var(--line); background: var(--chip); color: var(--fg); font: 700 15px var(--body); cursor: pointer; }
