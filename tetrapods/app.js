@@ -1,5 +1,5 @@
 // Drop us a tetrapod (DICTO, 2026-10-14; PLAN-TETRAPODS.md). Three real stretches of the Misaki coast (Osaka Bay), joined, from GSI elevation data,
-// with its breakwater blocks taken away: each visit drops a standard tetrapod onto the shore, and a visitor may add up to 3 more of any
+// with its breakwater blocks taken away: every visit drops a standard tetrapod onto the shore, and each visitor may add 3 more a day of any
 // family. Rocks and pines are placed from the terrain. Blocks fall with real gravity and settle on the land, the sea floor and each other; older blocks grow algae.
 // The heap is shared through Supabase (Store), and kept on the device when Supabase cannot be reached. DICTO · dictospheres.com
 (function () {
@@ -229,7 +229,7 @@
     b.rec.p = [p.x, p.y, p.z].map((v) => +v.toFixed(3)); b.rec.q = [q.x, q.y, q.z, q.w].map((v) => +v.toFixed(5));
     if (b.rec.p[1] < -15) return;  // fell off the edge: not kept
     paint(b.block, ageOf(b.rec));
-    Store.add(b.rec).then((ok) => setStatus(!ok ? 'That is all the blocks for today. Come back tomorrow.' : b === mine ? 'Your tetrapod has settled. Thank you for visiting.' : 'Settled. It is on the heap now.'));
+    Store.add(b.rec).then((ok) => setStatus(!ok ? 'The shore is full for today. Come back tomorrow.' : b === mine ? 'Your tetrapod has settled. Thank you for visiting.' : 'Settled. It is on the heap now.'));
   }
 
   // ---- where blocks go: the shore, or where you tap ----
@@ -341,11 +341,9 @@
   Store.load().then((heap) => {
     for (const rec of heap) { if (rec.f === 'ico') rec.f = 'd13'; if (rec.p && rec.q && FAMILIES[rec.f]) place(rec); }
     const who = !Store.shared ? '' : heap.length ? `${heap.length} ${heap.length === 1 ? 'block' : 'blocks'} on the shore so far.` : 'You are the first on the shore.';
-    if (!day.auto) {
-      day.auto = true; Store.setDay(day);
-      const [x, z] = randomShore(); focus = [x, z]; look(x, z, 55);
-      drop('tetra', x, z, true); setStatus(`Welcome. Your tetrapod is dropping onto the shore. ${who}`.trim());
-    } else setStatus(`Welcome back. Your block for today is already on the shore; you can add extras. ${who}`.trim());
+    // every visit drops a block of its own
+    const [x, z] = randomShore(); focus = [x, z]; look(x, z, 55);
+    drop('tetra', x, z, true); setStatus(`Welcome. Your tetrapod is dropping onto the shore. ${who}`.trim());
     // other visitors' blocks appear as they arrive
     setInterval(() => Store.newer().then((rows) => { for (const rec of rows) if (!mineIds.has(rec.id) && FAMILIES[rec.f]) place(rec); }), 60000);
   });

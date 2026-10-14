@@ -1,6 +1,6 @@
 -- Drop us a tetrapod: the shared heap (DICTO, 2026-10-14). Run once in the Supabase SQL editor of the "dictospheres" project.
--- Anyone can see the heap and add blocks; nobody can change or delete them from the page. Each visitor may add 4 blocks a day
--- (the welcome block + 3 extras), and the whole shore takes at most 2000 a day. Positions must lie on the scene.
+-- Anyone can see the heap and add blocks; nobody can change or delete them from the page. Every visit drops a block; each visitor may
+-- add at most 25 a day (visits + 3 extras, the extras counted on the page), and the whole shore takes at most 2000 a day. Positions must lie on the scene.
 create table if not exists public.tetrapods (
   id bigint generated always as identity primary key,
   created_at timestamptz not null default now(),
@@ -25,7 +25,7 @@ grant insert (family, p, q, visitor) on public.tetrapods to anon, authenticated;
 create or replace function public.tetrapods_limit() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
-  if (select count(*) from public.tetrapods where visitor = new.visitor and created_at > now() - interval '1 day') >= 4 then
+  if (select count(*) from public.tetrapods where visitor = new.visitor and created_at > now() - interval '1 day') >= 25 then
     raise exception 'daily limit reached';
   end if;
   if (select count(*) from public.tetrapods where created_at > now() - interval '1 day') >= 2000 then
