@@ -1,0 +1,234 @@
+// Drop us a tetrapod (DICTO, 2026-10-14; PLAN-TETRAPODS.md). The real coast at Tannowa, Misaki (Osaka Bay), from GSI elevation data,
+// with its breakwater blocks taken away: each visit drops a standard tetrapod onto the shore, and a visitor may add up to 3 more of any
+// family. Blocks fall with real gravity and settle on the land, the sea floor and each other; older blocks grow algae.
+// The heap is stored through Store (on this device for now; a shared Supabase table later, same interface). DICTO · dictospheres.com
+(function () {
+  'use strict';
+  const T = window.TANNOWA, PHI = (1 + Math.sqrt(5)) / 2;
+  const W = T.w, H = T.h, CELL = T.cell, SX = (W - 1) * CELL, SZ = (H - 1) * CELL;
+  const raw = atob(T.heights), heights = new Float32Array(W * H);
+  for (let i = 0; i < W * H; i++) { let v = raw.charCodeAt(2 * i) | (raw.charCodeAt(2 * i + 1) << 8); if (v > 32767) v -= 65536; heights[i] = v / 10; }
+  const hAt = (r, c) => heights[Math.max(0, Math.min(H - 1, r)) * W + Math.max(0, Math.min(W - 1, c))];
+  const toWorld = (r, c) => [-SX / 2 + c * CELL, hAt(r, c), -SZ / 2 + r * CELL];
+  function heightAtXZ(x, z) {
+    const c = (x + SX / 2) / CELL, r = (z + SZ / 2) / CELL, c0 = Math.floor(c), r0 = Math.floor(r), fc = c - c0, fr = r - r0;
+    return hAt(r0, c0) * (1 - fc) * (1 - fr) + hAt(r0, c0 + 1) * fc * (1 - fr) + hAt(r0 + 1, c0) * (1 - fc) * fr + hAt(r0 + 1, c0 + 1) * fc * fr;
+  }
+
+  // ---- the families: legs from a centre, seaside style (leg length 2.2 m) ----
+  const norm = (v) => { const l = Math.hypot(...v); return v.map((x) => x / l); };
+  const FAMILIES = {
+    tetra: { name: 'Tetrahedral', legs: [[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]].map(norm), r: 0.34 },
+    octa: { name: 'Octahedral', legs: [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]], r: 0.28 },
+    cube: { name: 'Cube corners', legs: [-1, 1].flatMap((a) => [-1, 1].flatMap((b) => [-1, 1].map((c) => norm([a, b, c])))), r: 0.24 },
+    ico: { name: 'Icosahedral', legs: [-1, 1].flatMap((a) => [-1, 1].flatMap((b) => [[0, a, b * PHI], [a, b * PHI, 0], [b * PHI, 0, a]])).map(norm), r: 0.18 },
+  };
+  const LEG = 2.2;
+  const MAX_EXTRAS = 3;
+
+  // ---- storage: on this device for now; Supabase replaces load/add with the same shapes ----
+  const KEY = 'dicto-tetrapods-heap-v1', DAYKEY = 'dicto-tetrapods-day-v1';
+  const today = () => new Date().toISOString().slice(0, 10);
+  const Store = {
+    load() { try { const a = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } },
+    add(rec) { try { const a = Store.load(); a.push(rec); localStorage.setItem(KEY, JSON.stringify(a)); } catch { /* storage blocked: the block stays for this visit only */ } },
+    day() { try { const d = JSON.parse(localStorage.getItem(DAYKEY) || 'null'); return d && d.date === today() ? d : { date: today(), auto: false, extras: 0 }; } catch { return { date: today(), auto: false, extras: 0 }; } },
+    setDay(d) { try { localStorage.setItem(DAYKEY, JSON.stringify(d)); } catch { /* best effort */ } },
+  };
+
+  // ---- scene ----
+  const canvas = document.getElementById('sea');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xbfd3dc);
+  scene.fog = new THREE.Fog(0xbfd3dc, 900, 2200);
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.5, 4000);
+  scene.add(new THREE.HemisphereLight(0xe8f0f2, 0x3e4a3a, 0.55));
+  const sun = new THREE.DirectionalLight(0xfff1dc, 1.15); sun.position.set(-260, 300, -320); scene.add(sun);
+
+  // terrain mesh, coloured by height and slope
+  const tg = new THREE.PlaneGeometry(SX, SZ, W - 1, H - 1); tg.rotateX(-Math.PI / 2);
+  const tp = tg.attributes.position, tcol = new Float32Array(tp.count * 3), col = new THREE.Color();
+  const SAND = new THREE.Color(0xcdbb8e), WETSAND = new THREE.Color(0x8f8366), SEABED = new THREE.Color(0x5d6f63), GRASS = new THREE.Color(0x5f7d45), WOOD = new THREE.Color(0x2f4a2c), ROCK = new THREE.Color(0x77736b), TOWN = new THREE.Color(0x9a948a);
+  for (let i = 0; i < tp.count; i++) {
+    const c = i % W, r = Math.floor(i / W), y = hAt(r, c); tp.setY(i, y);
+    const slope = Math.hypot(hAt(r, c + 1) - hAt(r, c - 1), hAt(r + 1, c) - hAt(r - 1, c)) / (2 * CELL);
+    if (y < -0.3) col.copy(SEABED).lerp(WETSAND, Math.max(0, 1 + y / 3));
+    else if (y < 1.6) col.copy(WETSAND).lerp(SAND, (y + 0.3) / 1.9);
+    else if (slope > 0.55) col.copy(ROCK);
+    else if (y < 8 && slope < 0.08) col.copy(TOWN).lerp(GRASS, 0.45);
+    else col.copy(GRASS).lerp(WOOD, Math.min(1, (y - 6) / 25));
+    tcol.set([col.r, col.g, col.b], i * 3);
+  }
+  tg.setAttribute('color', new THREE.BufferAttribute(tcol, 3)); tg.computeVertexNormals();
+  const terrain = new THREE.Mesh(tg, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0 }));
+  scene.add(terrain);
+  // the sea: a gently moving surface over a much wider area
+  const sg = new THREE.PlaneGeometry(SX * 3, SZ * 3, 90, 60); sg.rotateX(-Math.PI / 2);
+  const sea = new THREE.Mesh(sg, new THREE.MeshStandardMaterial({ color: 0x2f6f86, roughness: 0.3, metalness: 0.08, transparent: true, opacity: 0.8 }));
+  scene.add(sea);
+  const seaBase = Float32Array.from(sg.attributes.position.array);
+
+  // ---- physics ----
+  const world = new CANNON.World(); world.gravity.set(0, -9.82, 0); world.allowSleep = true;
+  world.broadphase = new CANNON.SAPBroadphase(world); world.solver.iterations = 12;
+  const mat = new CANNON.Material('concrete');
+  world.addContactMaterial(new CANNON.ContactMaterial(mat, mat, { friction: 0.6, restitution: 0.05 }));
+  // the ground: a height field of the same terrain
+  const data = []; for (let c = 0; c < W; c++) { const col2 = []; for (let j = 0; j < H; j++) col2.push(hAt(H - 1 - j, c)); data.push(col2); }
+  const ground = new CANNON.Body({ mass: 0, material: mat });
+  ground.addShape(new CANNON.Heightfield(data, { elementSize: CELL }));
+  ground.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+  ground.position.set(-SX / 2, 0, SZ / 2);
+  world.addBody(ground);
+  // cannon.js 0.6.2 builds a convex pillar for each height-field cell a block touches and logs a harmless winding warning for each;
+  // keep the console clear of them while the world steps
+  function stepWorld(dt) { const ce = console.error; console.error = () => {}; try { world.step(1 / 60, dt, 12); } finally { console.error = ce; } }
+
+  // ---- a tetrapod: mesh + body ----
+  const ALGAE = new THREE.Color(0x3d7a49), WET = new THREE.Color(0x5f6b5a), CONCRETE = new THREE.Color(0xbab6ad);
+  function blockMesh(fam) {
+    const F = FAMILIES[fam], g = new THREE.Group(), r = F.r * LEG, parts = [];
+    for (const d of F.legs) {
+      const geo = new THREE.CylinderGeometry(r * 0.52, r, LEG, 14, 4); geo.translate(0, LEG / 2, 0);
+      const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92 }));
+      m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(...d)); g.add(m); parts.push(m);
+    }
+    const hub = new THREE.Mesh(new THREE.IcosahedronGeometry(r * 1.05, 2), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92 }));
+    g.add(hub); parts.push(hub);
+    return { g, parts };
+  }
+  function paint(block, ageYears) {
+    const up = new THREE.Vector3(0, 1, 0), n = new THREE.Vector3(), c = new THREE.Color(), q = new THREE.Quaternion();
+    const age = Math.min(1, ageYears / 3);  // fully mossy after about three years
+    for (const m of block.parts) {
+      const geo = m.geometry, N = geo.attributes.normal, P = geo.attributes.position, colors = new Float32Array(N.count * 3);
+      q.copy(block.g.quaternion).multiply(m.quaternion);
+      for (let i = 0; i < N.count; i++) {
+        n.set(N.getX(i), N.getY(i), N.getZ(i)).applyQuaternion(q);
+        const facing = Math.max(0, n.dot(up)), speck = 0.5 + 0.5 * Math.sin(P.getX(i) * 7.3 + P.getY(i) * 5.1 + P.getZ(i) * 6.7);
+        const below = Math.max(0, Math.min(1, (1.2 - block.g.position.y) / 2));  // blocks low by the water green faster
+        const a = Math.min(1, age * (0.25 + 0.9 * facing + 0.5 * below) * (0.7 + 0.5 * speck));
+        c.copy(CONCRETE).lerp(WET, Math.min(1, age * 0.7)).lerp(ALGAE, a * a);
+        colors.set([c.r, c.g, c.b], i * 3);
+      }
+      geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    }
+  }
+  function blockBody(fam, mass) {
+    const F = FAMILIES[fam], r = F.r * LEG, b = new CANNON.Body({ mass, material: mat });
+    b.addShape(new CANNON.Sphere(r * 1.0));
+    for (const d of F.legs) for (const [t, s] of [[0.35, 0.9], [0.65, 0.75], [0.9, 0.58]]) b.addShape(new CANNON.Sphere(r * s), new CANNON.Vec3(d[0] * LEG * t, d[1] * LEG * t, d[2] * LEG * t));
+    b.allowSleep = true; b.sleepSpeedLimit = 0.25; b.sleepTimeLimit = 0.8; b.linearDamping = 0.05; b.angularDamping = 0.15;
+    return b;
+  }
+  const blocks = [];   // { rec, block, body, settling, born }
+  let yearsAhead = 0;
+  function place(rec) {      // a block already on the heap: still
+    const block = blockMesh(rec.f); block.g.position.set(...rec.p); block.g.quaternion.set(...rec.q);
+    scene.add(block.g); const body = blockBody(rec.f, 0); body.position.set(...rec.p); body.quaternion.set(...rec.q); world.addBody(body);
+    const b = { rec, block, body, settling: false }; blocks.push(b); paint(block, ageOf(rec)); return b;
+  }
+  const ageOf = (rec) => (Date.now() - rec.t) / (365.25 * 864e5) + yearsAhead;
+  let mine = null;
+  function drop(fam, x, z, welcome = false) {
+    const y = Math.max(0, heightAtXZ(x, z)) + 16 + Math.random() * 4;
+    const block = blockMesh(fam); scene.add(block.g);
+    const body = blockBody(fam, 30); body.position.set(x, y, z);
+    body.quaternion.setFromEuler(Math.random() * 6.28, Math.random() * 6.28, Math.random() * 6.28);
+    body.angularVelocity.set((Math.random() - 0.5) * 1.5, (Math.random() - 0.5) * 1.5, (Math.random() - 0.5) * 1.5);
+    world.addBody(body);
+    const rec = { f: fam, t: Date.now() };
+    const b = { rec, block, body, settling: true, sim: 0 }; blocks.push(b); paint(block, 0); if (welcome) mine = b;
+    return b;
+  }
+  function settle(b) {
+    b.settling = false; b.body.mass = 0; b.body.type = CANNON.Body.STATIC; b.body.updateMassProperties(); b.body.velocity.set(0, 0, 0); b.body.angularVelocity.set(0, 0, 0);
+    const p = b.body.position, q = b.body.quaternion;
+    b.rec.p = [p.x, p.y, p.z].map((v) => +v.toFixed(3)); b.rec.q = [q.x, q.y, q.z, q.w].map((v) => +v.toFixed(5));
+    if (b.rec.p[1] < -15) return;  // fell off the edge: not kept
+    Store.add(b.rec); paint(b.block, ageOf(b.rec)); setStatus(b === mine ? 'Your tetrapod has settled. Thank you for visiting.' : 'Settled. It is on the heap now.');
+  }
+
+  // ---- where blocks go: the shore, or where you tap ----
+  const shore = [];
+  for (let r = 1; r < H - 1; r++) for (let c = 1; c < W - 1; c++) { const y = hAt(r, c); if (y > -1.2 && y < 1.2 && (hAt(r - 1, c) < -0.3 || hAt(r + 1, c) < -0.3 || hAt(r, c - 1) < -0.3 || hAt(r, c + 1) < -0.3)) shore.push([r, c]); }
+  const randomShore = () => { const [r, c] = shore[Math.floor(Math.random() * shore.length)]; const [x, , z] = toWorld(r, c); return [x, z]; };
+  let focus = randomShore();
+
+  // the direction from the land out to sea at a point (the downhill direction of the terrain), so the camera stands offshore
+  function shoreNormal(x, z) {
+    const e = 12, gx = heightAtXZ(x + e, z) - heightAtXZ(x - e, z), gz = heightAtXZ(x, z + e) - heightAtXZ(x, z - e), l = Math.hypot(gx, gz) || 1;
+    return [-gx / l, -gz / l];
+  }
+  // ---- camera ----
+  const controls = new THREE.OrbitControls(camera, canvas);
+  controls.enableDamping = true; controls.maxPolarAngle = Math.PI / 2 - 0.06; controls.minDistance = 8; controls.maxDistance = 900;
+  function look(x, z, d = 60) {
+    const y = Math.max(0, heightAtXZ(x, z));
+    controls.target.set(x, y + 1, z); const n = shoreNormal(x, z); camera.position.set(x + n[0] * d, y + d * 0.6, z + n[1] * d); controls.update();
+  }
+
+  // ---- panel ----
+  const status = document.getElementById('status'), extrasEl = document.getElementById('extras');
+  const setStatus = (s) => { status.textContent = s; };
+  let fam = 'tetra', day = Store.day();
+  const chips = document.querySelectorAll('[data-fam]');
+  function renderPanel() {
+    chips.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.fam === fam)));
+    const left = MAX_EXTRAS - day.extras; extrasEl.textContent = left > 0 ? `${left} extra ${left === 1 ? 'block' : 'blocks'} left today` : 'No extras left today. Come back tomorrow.';
+    document.getElementById('dropHere').disabled = left <= 0;
+  }
+  chips.forEach((b) => b.addEventListener('click', () => { fam = b.dataset.fam; renderPanel(); setStatus(`${FAMILIES[fam].name} chosen. Tap the shore or the sea to drop it.`); }));
+  function extra(x, z) {
+    if (day.extras >= MAX_EXTRAS) { setStatus('That is all the extras for today. Come back tomorrow for more.'); return; }
+    day.extras += 1; Store.setDay(day); renderPanel(); drop(fam, x, z); setStatus(`${FAMILIES[fam].name} dropping.`);
+  }
+  document.getElementById('dropHere').addEventListener('click', () => { const [x, z] = randomShore(); look(x, z, 45); extra(x, z); });
+  // tap (not drag) on the scene drops the chosen family there
+  const ray = new THREE.Raycaster(), ptr = new THREE.Vector2(); let down = null;
+  canvas.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY]; });
+  canvas.addEventListener('pointerup', (e) => {
+    if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
+    const rc = canvas.getBoundingClientRect(); ptr.set(((e.clientX - rc.left) / rc.width) * 2 - 1, -((e.clientY - rc.top) / rc.height) * 2 + 1);
+    ray.setFromCamera(ptr, camera); const hit = ray.intersectObjects([sea, terrain])[0];
+    if (hit && Math.abs(hit.point.x) < SX / 2 - 3 && Math.abs(hit.point.z) < SZ / 2 - 3) extra(hit.point.x, hit.point.z);
+  });
+  const yearsEl = document.getElementById('years'), yearsTxt = document.getElementById('yearsTxt');
+  yearsEl.addEventListener('input', () => {
+    yearsAhead = +yearsEl.value; yearsTxt.textContent = yearsAhead === 0 ? 'today' : `in ${yearsAhead} ${yearsAhead === 1 ? 'year' : 'years'}`;
+    for (const b of blocks) if (!b.settling) paint(b.block, ageOf(b.rec));
+  });
+
+  // ---- start: the heap, then this visit's own block ----
+  for (const rec of Store.load()) if (rec.p && rec.q && FAMILIES[rec.f]) place(rec);
+  if (!day.auto) {
+    day.auto = true; Store.setDay(day);
+    const [x, z] = randomShore(); focus = [x, z]; look(x, z, 55);
+    drop('tetra', x, z, true); setStatus('Welcome. Your tetrapod is dropping onto the shore at Tannowa.');
+  } else { look(...focus, 160); setStatus('Welcome back. Your block for today is already on the shore; you can add extras.'); }
+  renderPanel();
+
+  // ---- loop ----
+  function resize() { const w = canvas.clientWidth, h = canvas.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / Math.max(1, h); camera.updateProjectionMatrix(); }
+  window.addEventListener('resize', resize); resize();
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.2, (now - last) / 1000); last = now;   // a slow device takes more physics steps per frame and keeps real time
+    stepWorld(dt);
+    for (const b of blocks) {
+      if (!b.settling) continue;
+      b.sim += dt;   // simulated seconds, so a slow device never freezes a block in mid-air
+      b.block.g.position.copy(b.body.position); b.block.g.quaternion.copy(b.body.quaternion);
+      const still = b.body.velocity.length() < 0.3 && b.body.angularVelocity.length() < 0.3;
+      if (b.body.sleepState === CANNON.Body.SLEEPING || (b.sim > 12 && still) || b.sim > 40 || b.body.position.y < -20) settle(b);
+    }
+    if (!reduce) { const t = now / 1000, P = sg.attributes.position; for (let i = 0; i < P.count; i++) { const x = seaBase[3 * i], z = seaBase[3 * i + 2]; P.setY(i, 0.25 * Math.sin(x * 0.05 + t * 0.9) + 0.15 * Math.sin(z * 0.08 - t * 0.7)); } P.needsUpdate = true; }
+    controls.update(); renderer.render(scene, camera);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  window.__tetrapods = { blocks, world };   // for tests
+})();

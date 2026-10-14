@@ -33,6 +33,13 @@ and it falls and settles on the shared heap that every earlier visitor's tetrapo
 
 - **Storage:** Supabase, a new project (DICTO creates it and sends the project URL and anon key).
 
+## Progress
+
+- 2026-10-14: the Tannowa scene (GSI 5 m elevation, 270 x 180 at 3.95 m, a gentle invented sea floor), the page with falling
+  blocks (three.js r128 + cannon.js 0.6.2; blocks of spheres on a height field), one welcome block per visit plus 3 extras, tap to
+  drop, the four families, algae by age with a "years ahead" preview, stored on the device only. Tested on dicto-node: blocks land and
+  settle at the waterline, no console errors. Not on the public site yet. Next: Supabase (waiting for the project), then the home card.
+
 ## Stages
 
 1. The four piece shapes (legs, proportions) as a quick preview for DICTO.
