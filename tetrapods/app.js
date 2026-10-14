@@ -1,7 +1,7 @@
 // Drop us a tetrapod (DICTO, 2026-10-14; PLAN-TETRAPODS.md). Three real stretches of the Misaki coast (Osaka Bay), joined, from GSI elevation data,
 // with its breakwater blocks taken away: each visit drops a standard tetrapod onto the shore, and a visitor may add up to 3 more of any
 // family. Rocks and pines are placed from the terrain. Blocks fall with real gravity and settle on the land, the sea floor and each other; older blocks grow algae.
-// The heap is stored through Store (on this device for now; a shared Supabase table later, same interface). DICTO · dictospheres.com
+// The heap is shared through Supabase (Store), and kept on the device when Supabase cannot be reached. DICTO · dictospheres.com
 (function () {
   'use strict';
   const T = window.COAST, PHI = (1 + Math.sqrt(5)) / 2;
@@ -30,12 +30,48 @@
   // ---- storage: on this device for now; Supabase replaces load/add with the same shapes ----
   const KEY = 'dicto-tetrapods-heap-v1', DAYKEY = 'dicto-tetrapods-day-v1';
   const today = () => new Date().toISOString().slice(0, 10);
-  const Store = {
+  // the shared heap lives in Supabase (project "dictospheres", table tetrapods, rules in data/supabase.sql); if it cannot be
+  // reached, blocks are kept on this device instead, so the page always works
+  const SUPA = { url: 'https://wdprxowinnseoyryfrkt.supabase.co/rest/v1/tetrapods', key: 'sb_publishable_xP_n5QnD1ncEDG0Nha4lbQ_SS2kdHQq' };
+  const visitor = (() => { try { let v = localStorage.getItem('dicto-tetrapods-visitor'); if (!v) { v = Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(16).padStart(2, '0')).join(''); localStorage.setItem('dicto-tetrapods-visitor', v); } return v; } catch { return 'v' + Math.random().toString(16).slice(2, 14); } })();
+  const local = {
     load() { try { const a = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } },
-    add(rec) { try { const a = Store.load(); a.push(rec); localStorage.setItem(KEY, JSON.stringify(a)); } catch { /* storage blocked: the block stays for this visit only */ } },
+    add(rec) { try { const a = local.load(); a.push(rec); localStorage.setItem(KEY, JSON.stringify(a)); } catch { /* storage blocked: the block stays for this visit only */ } },
+  };
+  const fromRow = (r) => ({ id: r.id, f: r.family, p: r.p, q: r.q, t: Date.parse(r.created_at) });
+  const Store = {
+    shared: false, lastId: 0,
+    async load() {   // the newest 600 blocks of the shared heap
+      try {
+        const res = await fetch(`${SUPA.url}?select=id,created_at,family,p,q&order=id.desc&limit=600`, { headers: { apikey: SUPA.key } });
+        if (!res.ok) throw new Error(res.status);
+        const rows = (await res.json()).map(fromRow).reverse(); Store.shared = true; Store.lastId = rows.length ? rows[rows.length - 1].id : 0; return rows;
+      } catch { Store.shared = false; return local.load(); }
+    },
+    async newer() {   // blocks other visitors added since we last looked
+      if (!Store.shared) return [];
+      try {
+        const res = await fetch(`${SUPA.url}?select=id,created_at,family,p,q&id=gt.${Store.lastId}&order=id.asc&limit=100`, { headers: { apikey: SUPA.key } });
+        if (!res.ok) return [];
+        const rows = (await res.json()).map(fromRow); if (rows.length) Store.lastId = rows[rows.length - 1].id; return rows;
+      } catch { return []; }
+    },
+    async add(rec) {
+      if (Store.shared) {
+        try {
+          const res = await fetch(`${SUPA.url}?select=id`, { method: 'POST', headers: { apikey: SUPA.key, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+            body: JSON.stringify({ family: rec.f, p: rec.p, q: rec.q, visitor }) });
+          if (res.ok) { const [row] = await res.json(); if (row) { mineIds.add(row.id); } return true; }
+          return false;
+        } catch { /* fall through to this device */ }
+      }
+      local.add(rec); return true;
+    },
     day() { try { const d = JSON.parse(localStorage.getItem(DAYKEY) || 'null'); return d && d.date === today() ? d : { date: today(), auto: false, extras: 0 }; } catch { return { date: today(), auto: false, extras: 0 }; } },
     setDay(d) { try { localStorage.setItem(DAYKEY, JSON.stringify(d)); } catch { /* best effort */ } },
   };
+  const mineIds = new Set();   // our own new blocks, so the refresh does not place them twice
+
 
   // ---- scene ----
   const canvas = document.getElementById('sea');
@@ -192,7 +228,8 @@
     const p = b.body.position, q = b.body.quaternion;
     b.rec.p = [p.x, p.y, p.z].map((v) => +v.toFixed(3)); b.rec.q = [q.x, q.y, q.z, q.w].map((v) => +v.toFixed(5));
     if (b.rec.p[1] < -15) return;  // fell off the edge: not kept
-    Store.add(b.rec); paint(b.block, ageOf(b.rec)); setStatus(b === mine ? 'Your tetrapod has settled. Thank you for visiting.' : 'Settled. It is on the heap now.');
+    paint(b.block, ageOf(b.rec));
+    Store.add(b.rec).then((ok) => setStatus(!ok ? 'That is all the blocks for today. Come back tomorrow.' : b === mine ? 'Your tetrapod has settled. Thank you for visiting.' : 'Settled. It is on the heap now.'));
   }
 
   // ---- where blocks go: the shore, or where you tap ----
@@ -300,13 +337,18 @@
   });
 
   // ---- start: the heap, then this visit's own block ----
-  for (const rec of Store.load()) { if (rec.f === 'ico') rec.f = 'd13'; if (rec.p && rec.q && FAMILIES[rec.f]) place(rec); }
-  if (!day.auto) {
-    day.auto = true; Store.setDay(day);
-    const [x, z] = randomShore(); focus = [x, z]; look(x, z, 55);
-    drop('tetra', x, z, true); setStatus('Welcome. Your tetrapod is dropping onto the shore.');
-  } else { look(...focus, 160); setStatus('Welcome back. Your block for today is already on the shore; you can add extras.'); }
-  renderPanel();
+  renderPanel(); setStatus('Loading the heap…'); look(...focus, 160);
+  Store.load().then((heap) => {
+    for (const rec of heap) { if (rec.f === 'ico') rec.f = 'd13'; if (rec.p && rec.q && FAMILIES[rec.f]) place(rec); }
+    const who = !Store.shared ? '' : heap.length ? `${heap.length} ${heap.length === 1 ? 'block' : 'blocks'} on the shore so far.` : 'You are the first on the shore.';
+    if (!day.auto) {
+      day.auto = true; Store.setDay(day);
+      const [x, z] = randomShore(); focus = [x, z]; look(x, z, 55);
+      drop('tetra', x, z, true); setStatus(`Welcome. Your tetrapod is dropping onto the shore. ${who}`.trim());
+    } else setStatus(`Welcome back. Your block for today is already on the shore; you can add extras. ${who}`.trim());
+    // other visitors' blocks appear as they arrive
+    setInterval(() => Store.newer().then((rows) => { for (const rec of rows) if (!mineIds.has(rec.id) && FAMILIES[rec.f]) place(rec); }), 60000);
+  });
 
   // ---- loop ----
   function resize() { const w = canvas.clientWidth, h = canvas.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / Math.max(1, h); camera.updateProjectionMatrix(); }
