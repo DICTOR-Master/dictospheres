@@ -18,6 +18,7 @@ html, body { height: 100%; margin: 0; background: #bfd3dc; color: var(--fg); fon
 .title { position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); left: 16px; right: 16px; pointer-events: none; color: #14222a; }
 .title { --halo: #d6f0fb; }   /* a light-blue edge round the lettering so it stands out on sea and hills alike */
 .title h1 { font: 800 clamp(30px, 6vw, 52px)/.9 var(--display); margin: 0; -webkit-text-stroke: 5px var(--halo); paint-order: stroke fill; text-shadow: 0 0 6px var(--halo); }
+.title .count { font-size: 16px; margin-top: 8px; }
 .title p { margin: 6px 0 0; font-size: 14px; font-weight: 700; max-width: 46ch; -webkit-text-stroke: 3px var(--halo); paint-order: stroke fill; text-shadow: 0 0 4px var(--halo); }
 .panel { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px)); background: var(--panel); border-top: 1px solid var(--line); display: grid; gap: 10px; backdrop-filter: blur(6px); }
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -34,7 +35,7 @@ html, body { height: 100%; margin: 0; background: #bfd3dc; color: var(--fg); fon
 .credit a { color: inherit; }
 </style></head><body>
 <canvas id="sea" aria-label="The Misaki coast, Osaka Bay, in 3D. Tap the shore or the sea to drop a tetrapod there; drag to look around."></canvas>
-<div class="title"><h1>Drop us a tetrapod</h1><p>Three real stretches of the Misaki coast, Osaka Bay, joined, with their breakwater blocks taken away. Every visit puts one back.</p></div>
+<div class="title"><h1>Drop us a tetrapod</h1><p>Three real stretches of the Misaki coast, Osaka Bay, joined, with their breakwater blocks taken away. Every visit puts one back.</p><p class="count" id="count" hidden></p></div>
 <div class="panel">
   <div id="status" role="status" aria-live="polite"></div>
   <div class="row" role="group" aria-label="Family of block">
@@ -48,11 +49,12 @@ html, body { height: 100%; margin: 0; background: #bfd3dc; color: var(--fg); fon
   </div>
   <div class="row"><span class="small" id="extras"></span><span class="small">Or tap anywhere on the shore or the sea. Drag to look around.</span></div>
   <div class="years"><label class="small" for="years">Algae <span id="yearsTxt">today</span></label><input id="years" type="range" min="0" max="5" step="1" value="0"></div>
-  <div class="credit"><span>Terrain: 国土地理院 (GSI Japan) elevation tiles</span><span>DICTO · <a href="https://dictospheres.com">dictospheres.com</a></span></div>
+  <div class="credit"><span id="live">Live from Misaki, Osaka Bay</span><span>Terrain: 国土地理院 (GSI Japan) elevation tiles</span><span>Weather: <a href="https://open-meteo.com/">Open-Meteo</a></span><span>DICTO · <a href="https://dictospheres.com">dictospheres.com</a></span></div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+<script src="sky.js"></script>
 <script src="scene.js"></script>
 <script src="d13.js"></script>
 <script src="pieces.js"></script>

@@ -54,6 +54,13 @@
         const rows = (await res.json()).map(fromRow).reverse(); Store.shared = true; Store.lastId = rows.length ? rows[rows.length - 1].id : 0; return rows;
       } catch { Store.shared = false; return local.load(); }
     },
+    async count() {   // how many blocks the shared heap holds in all (everyone can see it); null when it cannot be reached
+      if (!Store.shared) return null;
+      try {
+        const res = await fetch(`${SUPA.url}?select=id&limit=1`, { headers: { apikey: SUPA.key, Prefer: 'count=exact' } });
+        const m = /\/(\d+)$/.exec(res.headers.get('content-range') || ''); return res.ok && m ? +m[1] : null;
+      } catch { return null; }
+    },
     async newer() {   // blocks other visitors added since we last looked
       if (!Store.shared) return [];
       try {
@@ -87,7 +94,7 @@
   scene.background = new THREE.Color(0xbfd3dc);
   scene.fog = new THREE.Fog(0xbfd3dc, 1000, 3200);
   const camera = new THREE.PerspectiveCamera(40, 1, 0.5, 4000);
-  scene.add(new THREE.HemisphereLight(0xe8f0f2, 0x3e4a3a, 0.55));
+  const hemi = new THREE.HemisphereLight(0xe8f0f2, 0x3e4a3a, 0.55); scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xfff1dc, 1.15); sun.position.set(-260, 300, -320); scene.add(sun);
 
   // terrain mesh, coloured by height and slope
@@ -152,6 +159,7 @@
   const sea = new THREE.Mesh(sg, new THREE.MeshStandardMaterial({ color: 0x2f7f8e, roughness: 0.62, metalness: 0.02, transparent: true, opacity: 0.62 }));
   scene.add(sea);
   const seaBase = Float32Array.from(sg.attributes.position.array);
+  if (window.Sky) Sky.init({ scene, sun, hemi, sea, camera, ground: groundAt });   // the live sky over Misaki: time of day, moon, weather (sky.js)
 
   // ---- physics ----
   const world = new CANNON.World(); world.gravity.set(0, -9.82, 0); world.allowSleep = true;
@@ -271,6 +279,7 @@
     world.addBody(body);
     const rec = { f: fam, t: Date.now() };
     const b = { rec, block, body, settling: true, sim: 0 }; blocks.push(b); paint(block, 0); if (welcome) mine = b;
+    if (window.Sky) Sky.aurora(b);   // a green aurora as it falls (sky.js)
     return b;
   }
   function settle(b) {
@@ -279,7 +288,7 @@
     b.rec.p = [p.x, p.y, p.z].map((v) => +v.toFixed(3)); b.rec.q = [q.x, q.y, q.z, q.w].map((v) => +v.toFixed(5));
     if (b.rec.p[1] < -15) return;  // fell off the edge: not kept
     paint(b.block, ageOf(b.rec));
-    Store.add(b.rec).then((ok) => setStatus(!ok ? 'The shore is full for today. Come back tomorrow.' : b === mine ? 'Your tetrapod has settled. Thank you for visiting.' : 'Settled. It is on the heap now.'));
+    Store.add(b.rec).then((ok) => { showCount(); return ok; }).then((ok) => setStatus(!ok ? 'The shore is full for today. Come back tomorrow.' : b === mine ? 'Your tetrapod has settled. Thank you for visiting.' : 'Settled. It is on the heap now.'));
   }
 
   // ---- where blocks go: the shore, or where you tap ----
@@ -360,6 +369,9 @@
 
   // ---- panel ----
   const status = document.getElementById('status'), extrasEl = document.getElementById('extras');
+  // the count of everyone's blocks on the shore, under the title (shared heap only)
+  const countEl = document.getElementById('count');
+  function showCount() { Store.count().then((n) => { if (n == null || !countEl) return; countEl.textContent = `${n.toLocaleString('en')} ${n === 1 ? 'tetrapod' : 'tetrapods'} on the shore`; countEl.hidden = false; }); }
   const setStatus = (s) => { status.textContent = s; };
   let fam = 'tetra', day = Store.day();
   const chips = document.querySelectorAll('[data-fam]');
@@ -398,7 +410,8 @@
     const [x, z] = focus;
     drop('tetra', x, z, true); setStatus(`Welcome. Your tetrapod is dropping onto the shore. ${who}`.trim());
     // other visitors' blocks appear as they arrive
-    setInterval(() => Store.newer().then((rows) => { for (const rec of rows) if (!mineIds.has(rec.id) && FAMILIES[rec.f]) place(rec); }), 60000);
+    showCount();
+    setInterval(() => Store.newer().then((rows) => { for (const rec of rows) if (!mineIds.has(rec.id) && FAMILIES[rec.f]) place(rec); if (rows.length) showCount(); }), 60000);
   });
 
   // ---- loop ----
@@ -416,8 +429,8 @@
       const still = b.body.velocity.length() < 0.3 && b.body.angularVelocity.length() < 0.3;
       if (b.body.sleepState === CANNON.Body.SLEEPING || (b.sim > 12 && still) || b.sim > 40 || b.body.position.y < -20) settle(b);
     }
-    if (!reduce) { const t = now / 1000, P = sg.attributes.position; for (let i = 0; i < P.count; i++) { const x = seaBase[3 * i], z = seaBase[3 * i + 2]; P.setY(i, 0.25 * Math.sin(x * 0.05 + t * 0.9) + 0.15 * Math.sin(z * 0.08 - t * 0.7)); } P.needsUpdate = true; }
-    controls.update(); renderer.render(scene, camera);
+    if (!reduce) { const t = now / 1000, P = sg.attributes.position; for (let i = 0; i < P.count; i++) { const x = seaBase[3 * i], z = seaBase[3 * i + 2]; P.setY(i, (window.SkyWave || 1) * (0.25 * Math.sin(x * 0.05 + t * 0.9) + 0.15 * Math.sin(z * 0.08 - t * 0.7))); } P.needsUpdate = true; }
+    controls.update(); window.__tetrapodsTarget = controls.target; if (window.Sky) Sky.update(now); renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
