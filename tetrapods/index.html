@@ -23,6 +23,7 @@ html, body { height: 100%; margin: 0; background: #bfd3dc; color: var(--fg); fon
 .panel { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px)); background: var(--panel); border-top: 1px solid var(--line); display: grid; gap: 10px; backdrop-filter: blur(6px); }
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .chip, .btn { min-height: 48px; padding: 0 16px; border-radius: 24px; border: 1px solid var(--line); background: var(--chip); color: var(--fg); font: 700 15px var(--body); cursor: pointer; }
+.home { pointer-events: auto; display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; margin-bottom: 6px; border-radius: 20px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); font: 700 14px var(--body); text-decoration: none; }
 .chip[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
 .btn { background: var(--accent); color: #fff; border-color: var(--accent); }
 .btn:disabled { opacity: .45; cursor: default; }
@@ -35,7 +36,7 @@ html, body { height: 100%; margin: 0; background: #bfd3dc; color: var(--fg); fon
 .credit a { color: inherit; }
 </style></head><body>
 <canvas id="sea" aria-label="The Misaki coast, Osaka Bay, in 3D. Tap the shore or the sea to drop a tetrapod there; drag to look around."></canvas>
-<div class="title"><h1>Drop us a tetrapod</h1><p>Three real stretches of the Misaki coast, Osaka Bay, joined, with their breakwater blocks taken away. Every visit puts one back.</p><p class="count" id="count" hidden></p></div>
+<div class="title"><a class="home" href="../">← dictospheres.com</a><h1>Drop us a tetrapod</h1><p>Three real stretches of the Misaki coast, Osaka Bay, joined, with their breakwater blocks taken away. Every visit puts one back.</p><p class="count" id="count" hidden></p></div>
 <div class="panel">
   <div id="status" role="status" aria-live="polite"></div>
   <div class="row" role="group" aria-label="Family of block">
