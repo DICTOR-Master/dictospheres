@@ -126,6 +126,45 @@
   tg.setAttribute('color', new THREE.BufferAttribute(tcol, 3)); tg.computeVertexNormals();
   const terrain = new THREE.Mesh(tg, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0 }));
   scene.add(terrain);
+  // the shore (DICTO 2026-10-21): foam lapping at the waterline as the waves run up and draw back, and glistening wet sand behind it.
+  // A thin strip of the terrain round the waterline, drawn by a small shader on the graphics card: the run-up follows the sea's own
+  // swell plus a slower surge; foam froths where the water's edge is, lines of it are left behind as the water draws back, and the
+  // sand it has just left is darker and twinkles.
+  const shoreFoam = (() => {
+    const P = tg.attributes.position, idx = tg.index.array, keep = [];
+    for (let i = 0; i < idx.length; i += 3) {
+      const ys = [P.getY(idx[i]), P.getY(idx[i + 1]), P.getY(idx[i + 2])];
+      if (Math.min(...ys) > -0.9 && Math.max(...ys) < 1.4) keep.push(idx[i], idx[i + 1], idx[i + 2]);
+    }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', P); g.setIndex(keep);
+    const mat = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+      uniforms: { t: { value: 0 }, amp: { value: 1 } },
+      vertexShader: 'varying vec3 vp; void main(){ vp = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position + vec3(0.0, 0.015, 0.0), 1.0); }',
+      fragmentShader: `uniform float t; uniform float amp; varying vec3 vp;
+        float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        float n2(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+          return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y); }
+        void main(){
+          float sea = amp * (0.25 * sin(vp.x * 0.05 + t * 0.9) + 0.15 * sin(vp.z * 0.08 - t * 0.7));
+          float surge = amp * 0.35 * pow(0.5 + 0.5 * sin(t * 0.55 + vp.x * 0.021 + vp.z * 0.013), 2.0);
+          float edge = sea + surge;                                   // where the water's edge is now
+          float reach = sea + amp * 0.35;                             // how far the last waves ran up
+          float d = vp.y - edge;
+          float froth = n2(vp.xz * 1.7 + vec2(t * 0.3, -t * 0.2)) * 0.6 + n2(vp.xz * 5.0 - t * 0.5) * 0.4;
+          float band = smoothstep(0.16, 0.0, abs(d - 0.04)) * smoothstep(0.25, 0.6, froth);          // the frothing edge
+          float lines = (d > 0.0 && vp.y < reach) ? smoothstep(0.55, 0.85, n2(vp.xz * vec2(0.8, 3.2) + 7.0)) * 0.55 * (1.0 - d / max(0.05, reach - edge + 0.3)) : 0.0;
+          float wet = (vp.y > edge && vp.y < reach + 0.25) ? 1.0 - smoothstep(reach - 0.05, reach + 0.25, vp.y) : 0.0;
+          float glint = wet * step(0.985, h21(floor(vp.xz * 9.0) + floor(t * 3.0))) * 0.9;            // sparkles on the wet sand
+          float foam = clamp(band + lines, 0.0, 1.0);
+          vec3 c = mix(vec3(0.33, 0.30, 0.24), vec3(0.97, 0.98, 0.96), clamp(foam + glint, 0.0, 1.0));
+          float a = max(foam * 0.9, max(wet * 0.32, glint));
+          if (vp.y < edge - 0.2 || a < 0.01) discard;
+          gl_FragColor = vec4(c, a);
+        }`,
+    });
+    const m = new THREE.Mesh(g, mat); m.renderOrder = 1; scene.add(m); return m;
+  })();
   // the sea: a gently moving surface over a much wider area
   // beyond the data: the land carries on to the back line, rising into hills, and the sea floor carries on out to sea.
   // A coarse skirt under and around the terrain, continued from its edges.
@@ -429,10 +468,11 @@
       const still = b.body.velocity.length() < 0.3 && b.body.angularVelocity.length() < 0.3;
       if (b.body.sleepState === CANNON.Body.SLEEPING || (b.sim > 12 && still) || b.sim > 40 || b.body.position.y < -20) settle(b);
     }
+    shoreFoam.material.uniforms.amp.value = window.SkyWave || 1; if (!reduce) shoreFoam.material.uniforms.t.value = now / 1000;
     if (!reduce) { const t = now / 1000, P = sg.attributes.position; for (let i = 0; i < P.count; i++) { const x = seaBase[3 * i], z = seaBase[3 * i + 2]; P.setY(i, (window.SkyWave || 1) * (0.25 * Math.sin(x * 0.05 + t * 0.9) + 0.15 * Math.sin(z * 0.08 - t * 0.7))); } P.needsUpdate = true; }
     controls.update(); window.__tetrapodsTarget = controls.target; if (window.Sky) Sky.update(now); renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
-  window.__tetrapods = { blocks, world, rocks: rocks.length, pines: pines.length, sea, skirt, terrain };   // for tests
+  window.__tetrapods = { blocks, world, rocks: rocks.length, pines: pines.length, sea, skirt, terrain, shoreFoam };   // for tests
 })();
