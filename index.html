@@ -29,6 +29,9 @@
     a { color: inherit; }
 
     header { text-align: center; margin-bottom: 28px; }
+    .nameband { display: flex; align-items: center; justify-content: center; gap: clamp(12px, 4vw, 28px); margin-bottom: 10px; }
+    .nameband h1 { position: relative; left: 1mm; }   /* optical centring (DICTO): the D's upright makes the left look closer */
+    .nameband .side { width: clamp(72px, 22vw, 112px); height: auto; margin: 0; flex: none; }
     .mark { width: 112px; height: 112px; margin: 0 auto 8px; display: block; }
     .emblem-key { margin: 0 0 14px; font-size: 12px; letter-spacing: 0.04em; color: var(--muted); }
     .emblem-key b { color: var(--gold); letter-spacing: 0.12em; }
@@ -116,9 +119,12 @@
            star; O, the dot, a singularity. The letters stand for the five Platonic solids,
            Dodecahedron, Icosahedron, Cube, Tetrahedron, Octahedron, which inspired DICTO's work and
            are the basis of five of DICTO's six Japanese design patents for connecting PET bottles. -->
-      <img class="mark" src="./dicto-logo.png?v=2" width="120" height="120" alt="DICTO emblem: an abstraction of the name DICTO" />
+      <div class="nameband">
+        <img class="side og" src="./dicto-og-line.png" width="120" height="120" alt="The DICTO Ogdoecontahedron, gold line drawing with D·I·C·T·O in its hexagons" />
+        <h1>DICTO</h1>
+        <img class="mark side" src="./dicto-logo.png?v=2" width="120" height="120" alt="DICTO emblem: an abstraction of the name DICTO" />
+      </div>
       <p class="emblem-key"><b>D·I·C·T·O</b> — Dodecahedron, Icosahedron, Cube, Tetrahedron, Octahedron</p>
-      <h1>DICTO</h1>
       <p class="bio">Geometric sculptor in Osaka using recycled PET<br />Modular systems: <b>B1NR</b> / <b>DICTOspheres</b></p>
       <!-- Zenodo DOI badge (DICTO, 2026-10-09; one DICTO DOI only, 2026-10-20): Collected Geometric Works, always the latest version. -->
       <div class="doi-badges">
