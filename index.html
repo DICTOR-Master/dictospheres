@@ -115,7 +115,8 @@
     footer { margin-top: 36px; text-align: center; color: var(--muted); font-size: 13px; }
   </style>
   <!-- Visit counts (DICTO 2026-10-13): Vercel Web Analytics, totals only, no cookies, nothing that identifies anyone. -->
-  <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+  <!-- One site, four doors (2026-10-29): dictospheres.com shares one Vercel project with the three apps; its paths are tagged /_d for the counts. -->
+  <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); }; window.va('beforeSend', function (e) { return Object.assign({}, e, { url: e.url.replace(/^(https?:\/\/[^/]+)/, '$1/_d') }); });</script>
   <script defer src="/_vercel/insights/script.js"></script>
 </head>
 <body>
