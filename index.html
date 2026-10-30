@@ -82,7 +82,7 @@
     .links .go { color: var(--gold); flex: none; }
     .links .num { color: var(--gold); font-weight: 700; margin-right: 4px; }
     .papers { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin: 0 0 8px; }
-    .paper { display: grid; gap: 6px; text-decoration: none; color: inherit; border: 1px solid rgba(var(--gold-rgb), 0.25); border-radius: 10px; overflow: hidden; background: rgba(var(--gold-rgb), 0.04); }
+    .paper { display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: inherit; border: 1px solid rgba(var(--gold-rgb), 0.25); border-radius: 10px; overflow: hidden; background: rgba(var(--gold-rgb), 0.04); }
     .paper:hover, .paper:focus-visible { border-color: rgba(var(--gold-rgb), 0.6); }
     .paper img { width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: #0d0d0d; }
     .paper .t { font-weight: 600; padding: 0 12px; }
@@ -100,7 +100,7 @@
     .paper .btn { flex: 1; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid rgba(var(--gold-rgb), 0.5); border-radius: 8px; color: var(--gold); text-decoration: none; font-weight: 600; font-size: 14px; }
     .paper .btn:hover, .paper .btn:focus-visible { background: rgba(var(--gold-rgb), 0.15); }
     .paper.feature img { aspect-ratio: 16 / 9; }
-    .paper .inbook { margin: 0 12px; font-size: 12px; color: var(--gold); text-decoration: none; border: 1px solid rgba(var(--gold-rgb), 0.4); border-radius: 999px; padding: 3px 9px; justify-self: start; }
+    .paper .inbook { margin: 0 12px; font-size: 12px; color: var(--gold); text-decoration: none; border: 1px solid rgba(var(--gold-rgb), 0.4); border-radius: 999px; padding: 3px 9px; align-self: flex-start; }
     .paper .soon { color: var(--muted); font-weight: 400; font-size: 12px; border: 1px solid rgba(var(--gold-rgb), 0.35); border-radius: 999px; padding: 1px 8px; margin-left: 6px; vertical-align: 1px; }
     .disc-note { color: var(--muted); font-size: 13px; margin: -4px 0 10px; }
     .disc-note a { color: var(--gold); }
