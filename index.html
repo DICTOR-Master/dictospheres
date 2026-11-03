@@ -94,11 +94,71 @@
     .news .d { color: var(--gold); font-weight: 600; margin-right: 8px; font-variant-numeric: tabular-nums; }
     .news b { color: inherit; }
     .paper.feature { grid-column: 1 / -1; }
-    .books { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
-    .books .paper.feature { grid-column: auto; }
-    .books .series { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; border: 1px solid #c9a24a55; border-radius: 10px; padding: 26px 10px 10px; position: relative; }
-    .books .series-name { position: absolute; top: 6px; left: 12px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; opacity: .8; }
-    @media (max-width: 640px) { .books { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 10px; padding-bottom: 6px; } .books > .paper, .books .series > .paper { flex: 0 0 82%; scroll-snap-align: start; } .books .series { display: contents; } .books .series-name { display: none; } }
+    /* Books as a bookcase (DICTO 2026-11-03): every book the same A4 cover (210:297) standing on a shelf,
+       two to a shelf on phones, three above 520px; the Cycles of Growth pair share a label plate on the ledge.
+       A cover turns over to its back cover: hover or keyboard focus on desktop, tap on touch (tap again or ↺). */
+    .shelf-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 30px 0 12px; }
+    .shelf-head h2 { margin: 0; }
+    .lang-btn { position: relative; flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font: 22px/1 var(--font);
+      background: rgba(10, 10, 18, 0.72); border: 1px solid rgba(var(--gold-rgb), 0.45); border-radius: 10px; cursor: pointer; }
+    .lang-btn:focus-within { outline: 2px solid var(--gold); outline-offset: 2px; }
+    .lang-btn select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 16px; }
+    .vh { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+    .books { --n: 2; --g: 20px; display: flex; flex-wrap: wrap; column-gap: var(--g); row-gap: 36px; padding: 0 calc(var(--g) / 2) 30px; margin: 0 0 8px; }
+    @media (min-width: 520px) { .books { --n: 3; } }
+    .books > .book { width: calc((100% - (var(--n) - 1) * var(--g)) / var(--n) - 0.5px); }
+    .books > .series { width: calc(2 * (100% - (var(--n) - 1) * var(--g)) / var(--n) + var(--g) - 1px); display: flex; gap: var(--g); position: relative; }
+    .series > .book { width: calc((100% - var(--g)) / 2); }
+    .book { position: relative; perspective: 1200px; }
+    /* the shelf: a thin dark-wood ledge under each cover, joined across the gaps, with a soft shadow below */
+    .book::after { content: ""; position: absolute; left: calc(var(--g) / -2); right: calc(var(--g) / -2); top: 100%; height: 8px;
+      background: linear-gradient(#5e4632, #3a2a1d 55%, #261b12); border-top: 1px solid rgba(255, 222, 170, 0.22);
+      box-shadow: 0 9px 12px -5px rgba(0, 0, 0, 0.85); }
+    .book::before { content: ""; position: absolute; left: 6%; right: 2%; bottom: -3px; height: 12px; border-radius: 50%;
+      background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.7), transparent 70%); }
+    .series-name { position: absolute; left: 50%; top: calc(100% + 1px); transform: translateX(-50%); z-index: 2; white-space: nowrap;
+      padding: 2px 9px 1px; font-size: 9.5px; line-height: 1.3; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold);
+      background: linear-gradient(#2c2416, #19140c); border: 1px solid rgba(var(--gold-rgb), 0.55); border-radius: 2px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6); }
+    .book-in { position: relative; z-index: 1; aspect-ratio: 210 / 297; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.3, 0.7, 0.2, 1); }
+    .book.is-flipped .book-in, html:not(.bk-js) .book:hover .book-in, html:not(.bk-js) .book:focus-within .book-in { transform: rotateY(180deg); }
+    .book-front, .book-back { position: absolute; inset: 0; -webkit-backface-visibility: hidden; backface-visibility: hidden; border-radius: 2px 4px 4px 2px; overflow: hidden;
+      box-shadow: 3px 5px 10px rgba(0, 0, 0, 0.55), 1px 1px 2px rgba(0, 0, 0, 0.6); }
+    .book-front { display: block; margin: 0; padding: 0; border: 0; background: #140f0b; cursor: pointer; color: inherit; font: inherit; touch-action: manipulation; }
+    .book-front img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    /* a hint of the spine on the left edge */
+    .book-front::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+      background: linear-gradient(90deg, rgba(0, 0, 0, 0.6) 0, rgba(255, 255, 255, 0.12) 2.5%, rgba(0, 0, 0, 0.22) 4.5%, transparent 9%); }
+    .book-front:focus-visible { outline: none; }
+    .book:has(.book-front:focus-visible) { outline: 2px solid var(--gold); outline-offset: 4px; border-radius: 3px; }
+    .book-back { transform: rotateY(180deg); display: flex; flex-direction: column; background: linear-gradient(160deg, #191a24, #0d0e14); border: 1px solid rgba(var(--gold-rgb), 0.35); }
+    .book.is-flipped .book-front { pointer-events: none; }
+    .bk-js .book:not(.is-flipped) .book-back { pointer-events: none; }
+    .bb-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 8px 9px 10px;
+      scrollbar-width: thin; scrollbar-color: rgba(var(--gold-rgb), 0.45) transparent;
+      -webkit-mask-image: linear-gradient(#000 calc(100% - 12px), transparent); mask-image: linear-gradient(#000 calc(100% - 12px), transparent); }
+    .bb-head { display: flex; align-items: center; gap: 6px; margin: 0 30px 4px 0; min-height: 24px; font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); }
+    .bb-mark { width: 18px; height: 18px; flex: none; }
+    .book-back .t { margin: 0 0 3px; font-size: 13px; line-height: 1.25; font-weight: 700; color: var(--text); overflow-wrap: anywhere; }
+    .book-back .sub { margin: 0 0 5px; font-size: 11px; line-height: 1.3; font-style: italic; color: var(--gold); }
+    .book-back .s { margin: 0 0 8px; font-size: 12px; line-height: 1.5; color: #cdd1dc; overflow-wrap: break-word; }
+    .book-back .pdoi { display: flex; }
+    .book-back .doi-badge { flex-wrap: wrap; max-width: 100%; font-size: 10px; }
+    .book-back .doi-badge span { padding: 5px 6px; }
+    .book-back .btns { display: flex; flex-wrap: wrap; gap: 5px; padding: 6px 7px 7px; border-top: 1px solid rgba(var(--gold-rgb), 0.2); background: rgba(8, 9, 13, 0.7); }
+    .book-back .btn { flex: 1 1 0; min-width: min-content; min-height: 36px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 3px 4px;
+      border: 1px solid rgba(var(--gold-rgb), 0.55); border-radius: 7px; color: var(--gold); text-decoration: none; font-weight: 600; font-size: 12px; line-height: 1.15; word-break: keep-all; touch-action: manipulation; }
+    .book-back .btn:hover, .book-back .btn:focus-visible { background: rgba(var(--gold-rgb), 0.15); }
+    .bb-close { position: absolute; top: 3px; right: 3px; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(var(--gold-rgb), 0.45); border-radius: 50%; background: rgba(10, 11, 16, 0.9); color: var(--gold); font: 18px/1 var(--font); cursor: pointer; touch-action: manipulation; }
+    .bb-close:hover, .bb-close:focus-visible { background: rgba(var(--gold-rgb), 0.18); }
+    /* reduced motion: a crossfade instead of the turn */
+    @media (prefers-reduced-motion: reduce) {
+      .book-in { transition: none; transform: none !important; }
+      .book-front, .book-back { transition: opacity 0.3s, visibility 0.3s; }
+      .book-back { transform: none; opacity: 0; visibility: hidden; }
+      .book.is-flipped .book-back, html:not(.bk-js) .book:hover .book-back, html:not(.bk-js) .book:focus-within .book-back { opacity: 1; visibility: visible; }
+      .book.is-flipped .book-front, html:not(.bk-js) .book:hover .book-front, html:not(.bk-js) .book:focus-within .book-front { opacity: 0; }
+    }
     /* Two buttons per paper (DICTO 2026-10-13): read it, or open its world in Kaleidohedra. */
     .paper .pdoi { display: flex; padding: 0 12px; }
     .paper .pdoi .doi-badge span { padding: 6px 7px; }
@@ -163,16 +223,18 @@
     </a>
     <span class="extra">New here? Try <a href="https://rhombiverse.dictospheres.com/rhombis.html">RHOMBIS</a>, the 3D puzzle from Rhombiverse</span>
 
-    <h2 id="books">Books</h2>
-    <p class="disc-note">Books by DICTO: his manifesto, and his papers gathered by theme.</p>
-    <div class="papers books">
-      <div class="paper feature"><img src="papers/quanta-book.jpg?v=1" alt="The cover of Quanta of Space: the letters D I C T O in a five by five square, each on a different solid, with the title" loading="eager" width="1600" height="900"><span class="t"><span class="num">Book</span> Quanta of Space: A Manifesto</span><span class="s">DICTO's manifesto and the overview of the whole work: is space shared out into pieces, and which? Every paper as a short entry in six chapters, with the rule of halves at the centre, and the catalogue of all the atoms: every named shape with its D-number, each drawn alone. 153 pages.</span><span class="pdoi"><a class="doi-badge" href="https://doi.org/10.5281/zenodo.23754454" title="DICTO DOI, always the newest version"><span>DICTO DOI</span><span>10.5281/zenodo.23754454</span></a></span><span class="btns"><a class="btn" href="https://doi.org/10.5281/zenodo.23754454">Read the book</a></span></div>
-      <div class="paper feature"><img src="papers/hexoct-book.jpg?v=3" alt="The cover of HexOct: The Hexagonality Law, with the Window Law, the Rule of Halves and the Swap Rule: the letters H E X O C T in a six by six square, each on a gold, teal and violet HexOct tile, with the title in LED-style letters" loading="eager" width="1600" height="900"><span class="t"><span class="num">Book</span> HexOct: The Hexagonality Law</span><span class="sub">with the Window Law, the Rule of Halves &amp; the Swap Rule</span><span class="s">Sixteen papers in one book, from DICTO's PET-bottle-cap DICTOspheres to spin ice and the two HexOct tiles. The Hexagonality Law is a law of structural crystallography: in every close-packed crystal structure, however its layers are stacked, the space is shared out into finitely many kinds of piece, borrowed whole or in half from the cubic and the hexagonal structures; pieces change only by swapping; and every count is a straight line in the structure's hexagonality, the crystallographers' share of hexagonal layers. Then the law in real materials, from hydrogen in titanium to battery cathodes, ice, diamond, nanowires and magnets. Then HexOct: every stacking is a string of just two tiles, and keyed tiles, HexOct-K, can compute. Last, new in Part IV, the Window Law, which contains the Hexagonality Law and marks its exact reach. Version 7, third edition: 113 pages with 13 plates, an index and a new cover.</span><span class="pdoi"><a class="doi-badge" href="https://doi.org/10.5281/zenodo.23731359" title="DICTO DOI, always the newest version"><span>DICTO DOI</span><span>10.5281/zenodo.23731359</span></a></span><span class="btns"><a class="btn" href="https://doi.org/10.5281/zenodo.23731359">Read the book</a><a class="btn" href="https://kaleidohedra.dictospheres.com/?open=stackings:4H">View in app</a></span></div>
-      <div class="paper feature"><img src="papers/alicia-book.jpg?v=1" alt="The cover of Alicia in Wonderland: The Red and White Queens: the letters W O N D E R in a six by six square on spheres in red, white, gold, blue, teal and lilac, with the title" loading="eager" width="1600" height="900"><span class="t"><span class="num">Book</span> Alicia in Wonderland: The Red &amp; White Queens</span><span class="s">Two regular solids of four-dimensional space, seen by their shadows and slices: the 600-cell, the White Queen, and its polar partner the 120-cell, the Red Queen, with the work that led to them, from Alicia Boole Stott's slices of 1900 to DICTO's radial cell projection. Aristotle's five pyramids turn out to be the cores of the four-dimensional solids. Version 3: 117 pages with 43 full-page plates.</span><span class="pdoi"><a class="doi-badge" href="https://doi.org/10.5281/zenodo.23753305" title="DICTO DOI, always the newest version"><span>DICTO DOI</span><span>10.5281/zenodo.23753305</span></a></span><span class="btns"><a class="btn" href="https://doi.org/10.5281/zenodo.23753305">Read the book</a><a class="btn" href="https://kaleidohedra.dictospheres.com/?open=whitequeen:shells">View in app</a></span></div>
-      <div class="paper feature"><img src="papers/dictonic-bonds-book.jpg?v=1" alt="The cover of DICTONIC Bonds: the letters D I C T O N I C in an eight by eight square, each on one of the eight pieces of DICTO's four bonds, with the title in LED-style letters" loading="eager" width="1600" height="900"><span class="t"><span class="num">Book</span> DICTONIC Bonds</span><span class="sub">from the Octet to the Rule of Halves</span><span class="s">A DICTONIC bond is a pair of pieces that fill space together, and there are four: the Golden bond, Icosaxes and Unborn Axes; the Keyed bond, Lotus Jewel Axes and Dodecaxes; the Delian bond, Samson and Delilah; and the Twinned Delian bond, Sonsam and Lahdeli. Eleven papers as eleven chapters, in the order DICTO proposed: every mix of the Platonic solids fills space; the golden and Delian cuts that find the bonds; the web of shared faces as one weight slides; and the Rule of Halves for every close-packed stacking. 106 pages, with an index.</span><span class="pdoi"><a class="doi-badge" href="https://doi.org/10.5281/zenodo.23898027" title="DICTO DOI, always the newest version"><span>DICTO DOI</span><span>10.5281/zenodo.23898027</span></a></span><span class="btns"><a class="btn" href="https://doi.org/10.5281/zenodo.23898027">Read the book</a></span></div>
-      <div class="series"><span class="series-name">Cycles of Growth</span>
-      <div class="paper feature"><img src="papers/golden-cycle-book.jpg?v=5" alt="The cover of The Golden Cycle: the letters G O L D E N in a six by six square on six solids of the golden cycle, with the title" loading="eager" width="1600" height="900"><span class="t"><span class="num">Book</span> The Golden Cycle: Icosahedral Shells</span><span class="sub">Cycles of Growth · Part I</span><span class="s">Thirteen papers on icosahedral shells, from the Chain of Karma to the gnomon: the icosahedron and the dodecahedron each fill exactly as a shell round the other, the shells alternate without end and grow by φ³ each turn; six solids nest in a cycle, turned inside out it gives a second cycle, and the full turn of twelve stations is a gnomon. 122 pages, with a table of the cycles and an index.</span><span class="pdoi"><a class="doi-badge" href="https://doi.org/10.5281/zenodo.23752452" title="DICTO DOI, always the newest version"><span>DICTO DOI</span><span>10.5281/zenodo.23752452</span></a></span><span class="btns"><a class="btn" href="https://doi.org/10.5281/zenodo.23752452">Read the book</a></span></div>
-      <div class="paper feature"><img src="papers/star-cores-book.jpg?v=1" alt="The cover of Star Cores: the letters S T A R C O R E S in a nine by nine square, each on a star of one of DICTO's shapes, with the title in LED-style letters" loading="eager" width="1600" height="900"><span class="t"><span class="num">Book</span> Star Cores: Spikes, Halos and Cycles</span><span class="sub">Cycles of Growth · Part II</span><span class="s">Every solid can be divided into pyramids, one on each face, meeting at the centre; DICTO turned them inside out, and the solid becomes a star wrapped in its halo. Five papers as five chapters: the TI Star; polar spikes that always fill the layer to the halo; cores that swap back and forth; the exact gains of DICTO's growth rule; and the valley law, by which the symmetric stars freeze while the sharp-edged pieces keep growing. With a card for each of 60 shapes, six plates and the cycles in one table. 131 pages.</span><span class="pdoi"><a class="doi-badge" href="https://doi.org/10.5281/zenodo.23867732" title="DICTO DOI, always the newest version"><span>DICTO DOI</span><span>10.5281/zenodo.23867732</span></a></span><span class="btns"><a class="btn" href="https://doi.org/10.5281/zenodo.23867732">Read the book</a></span></div>
+    <!-- Books as a bookcase (DICTO 2026-11-03): every book the same A4 cover on a shelf; the cover turns over to its back cover. -->
+    <div class="shelf-head"><h2 id="books" data-i18n="books.heading">Books</h2><label class="lang-btn" title="Language" data-i18n-attr="title:site.language"><span aria-hidden="true">🌐</span><select aria-label="Language" data-i18n-attr="aria-label:site.language"><option value="en" lang="en">English</option><option value="ja" lang="ja">日本語</option><option value="es" lang="es">Español</option><option value="fr" lang="fr">Français</option><option value="ko" lang="ko">한국어</option><option value="zh" lang="zh">中文</option><option value="ru" lang="ru">Русский</option></select></label></div>
+    <p class="disc-note"><span data-i18n="books.note">Books by DICTO: his manifesto, and his papers gathered by theme.</span> <span data-i18n="books.hint">Tap a cover, or point at it, to turn it over.</span></p>
+    <div class="books">
+      <div class="book"><div class="book-in"><button type="button" class="book-front" aria-expanded="false" aria-controls="book-quanta"><span class="vh" data-i18n="books.turn">Turn over: </span><img src="papers/quanta-cover.jpg?v=1" alt="The cover of Quanta of Space: the letters D I C T O in a five by five square, each on a different solid, with the title" loading="eager" width="800" height="1131"></button><div class="book-back" id="book-quanta" role="group" aria-label="Quanta of Space: A Manifesto"><div class="bb-scroll"><p class="bb-head"><img class="bb-mark" src="./dicto-logo.png?v=2" alt="" width="18" height="18"><span data-i18n="books.tag">Book</span></p><h3 class="t" data-i18n="books.quanta.title">Quanta of Space: A Manifesto</h3><p class="s" data-i18n="books.quanta.desc">DICTO's manifesto and the overview of the whole work: is space shared out into pieces, and which? Every paper as a short entry in six chapters, with the rule of halves at the centre, and the catalogue of all the atoms: every named shape with its D-number, each drawn alone. 153 pages.</p><span class="pdoi"><a class="doi-badge" href="https://doi.org/10.5281/zenodo.23754454" title="DICTO DOI, always the newest version"><span>DICTO DOI</span><span>10.5281/zenodo.23754454</span></a></span></div><span class="btns"><a class="btn" href="https://doi.org/10.5281/zenodo.23754454" data-i18n="books.read">Read the book</a></span><button type="button" class="bb-close" aria-label="Turn back to the front cover" data-i18n-attr="aria-label:books.unflip">↺</button></div></div></div>
+      <div class="book"><div class="book-in"><button type="button" class="book-front" aria-expanded="false" aria-controls="book-hexoct"><span class="vh" data-i18n="books.turn">Turn over: </span><img src="papers/hexoct-cover.jpg?v=1" alt="The cover of HexOct: The Hexagonality Law, with the Window Law, the Rule of Halves and the Swap Rule: the letters H E X O C T in a six by six square, each on a gold, teal and violet HexOct tile, with the title in LED-style letters" loading="eager" width="800" height="1131"></button><div class="book-back" id="book-hexoct" role="group" aria-label="HexOct: The Hexagonality Law"><div class="bb-scroll"><p class="bb-head"><img class="bb-mark" src="./dicto-logo.png?v=2" alt="" width="18" height="18"><span data-i18n="books.tag">Book</span></p><h3 class="t" data-i18n="books.hexoct.title">HexOct: The Hexagonality Law</h3><p class="sub">with the Window Law, the Rule of Halves &amp; the Swap Rule</p><p class="s" data-i18n="books.hexoct.desc">Sixteen papers in one book, from DICTO's PET-bottle-cap DICTOspheres to spin ice and the two HexOct tiles. The Hexagonality Law is a law of structural crystallography: in every close-packed crystal structure, however its layers are stacked, the space is shared out into finitely many kinds of piece, borrowed whole or in half from the cubic and the hexagonal structures; pieces change only by swapping; and every count is a straight line in the structure's hexagonality, the crystallographers' share of hexagonal layers. Then the law in real materials, from hydrogen in titanium to battery cathodes, ice, diamond, nanowires and magnets. Then HexOct: every stacking is a string of just two tiles, and keyed tiles, HexOct-K, can compute. Last, new in Part IV, the Window Law, which contains the Hexagonality Law and marks its exact reach. Version 7, third edition: 113 pages with 13 plates, an index and a new cover.</p><span class="pdoi"><a class="doi-badge" href="https://doi.org/10.5281/zenodo.23731359" title="DICTO DOI, always the newest version"><span>DICTO DOI</span><span>10.5281/zenodo.23731359</span></a></span></div><span class="btns"><a class="btn" href="https://doi.org/10.5281/zenodo.23731359" data-i18n="books.read">Read the book</a><a class="btn" href="https://kaleidohedra.dictospheres.com/?open=stackings:4H" data-i18n="books.app">View in app</a></span><button type="button" class="bb-close" aria-label="Turn back to the front cover" data-i18n-attr="aria-label:books.unflip">↺</button></div></div></div>
+      <div class="book"><div class="book-in"><button type="button" class="book-front" aria-expanded="false" aria-controls="book-alicia"><span class="vh" data-i18n="books.turn">Turn over: </span><img src="papers/alicia-cover.jpg?v=1" alt="The cover of Alicia in Wonderland: The Red and White Queens: the letters W O N D E R in a six by six square on spheres in red, white, gold, blue, teal and lilac, with the title" loading="eager" width="800" height="1131"></button><div class="book-back" id="book-alicia" role="group" aria-label="Alicia in Wonderland: The Red &amp; White Queens"><div class="bb-scroll"><p class="bb-head"><img class="bb-mark" src="./dicto-logo.png?v=2" alt="" width="18" height="18"><span data-i18n="books.tag">Book</span></p><h3 class="t" data-i18n="books.alicia.title">Alicia in Wonderland: The Red &amp; White Queens</h3><p class="s" data-i18n="books.alicia.desc">Two regular solids of four-dimensional space, seen by their shadows and slices: the 600-cell, the White Queen, and its polar partner the 120-cell, the Red Queen, with the work that led to them, from Alicia Boole Stott's slices of 1900 to DICTO's radial cell projection. Aristotle's five pyramids turn out to be the cores of the four-dimensional solids. Version 3: 117 pages with 43 full-page plates.</p><span class="pdoi"><a class="doi-badge" href="https://doi.org/10.5281/zenodo.23753305" title="DICTO DOI, always the newest version"><span>DICTO DOI</span><span>10.5281/zenodo.23753305</span></a></span></div><span class="btns"><a class="btn" href="https://doi.org/10.5281/zenodo.23753305" data-i18n="books.read">Read the book</a><a class="btn" href="https://kaleidohedra.dictospheres.com/?open=whitequeen:shells" data-i18n="books.app">View in app</a></span><button type="button" class="bb-close" aria-label="Turn back to the front cover" data-i18n-attr="aria-label:books.unflip">↺</button></div></div></div>
+      <div class="book"><div class="book-in"><button type="button" class="book-front" aria-expanded="false" aria-controls="book-bonds"><span class="vh" data-i18n="books.turn">Turn over: </span><img src="papers/dictonic-bonds-cover.jpg?v=1" alt="The cover of DICTONIC Bonds: the letters D I C T O N I C in an eight by eight square, each on one of the eight pieces of DICTO's four bonds, with the title in LED-style letters" loading="eager" width="800" height="1131"></button><div class="book-back" id="book-bonds" role="group" aria-label="DICTONIC Bonds"><div class="bb-scroll"><p class="bb-head"><img class="bb-mark" src="./dicto-logo.png?v=2" alt="" width="18" height="18"><span data-i18n="books.tag">Book</span></p><h3 class="t" data-i18n="books.bonds.title">DICTONIC Bonds</h3><p class="sub">from the Octet to the Rule of Halves</p><p class="s" data-i18n="books.bonds.desc">A DICTONIC bond is a pair of pieces that fill space together, and there are four: the Golden bond, Icosaxes and Unborn Axes; the Keyed bond, Lotus Jewel Axes and Dodecaxes; the Delian bond, Samson and Delilah; and the Twinned Delian bond, Sonsam and Lahdeli. Eleven papers as eleven chapters, in the order DICTO proposed: every mix of the Platonic solids fills space; the golden and Delian cuts that find the bonds; the web of shared faces as one weight slides; and the Rule of Halves for every close-packed stacking. 106 pages, with an index.</p><span class="pdoi"><a class="doi-badge" href="https://doi.org/10.5281/zenodo.23898027" title="DICTO DOI, always the newest version"><span>DICTO DOI</span><span>10.5281/zenodo.23898027</span></a></span></div><span class="btns"><a class="btn" href="https://doi.org/10.5281/zenodo.23898027" data-i18n="books.read">Read the book</a></span><button type="button" class="bb-close" aria-label="Turn back to the front cover" data-i18n-attr="aria-label:books.unflip">↺</button></div></div></div>
+      <div class="series" role="group" aria-labelledby="series-cog">
+      <div class="book"><div class="book-in"><button type="button" class="book-front" aria-expanded="false" aria-controls="book-golden"><span class="vh" data-i18n="books.turn">Turn over: </span><img src="papers/golden-cycle-cover.jpg?v=1" alt="The cover of The Golden Cycle: the letters G O L D E N in a six by six square on six solids of the golden cycle, with the title" loading="eager" width="800" height="1131"></button><div class="book-back" id="book-golden" role="group" aria-label="The Golden Cycle: Icosahedral Shells"><div class="bb-scroll"><p class="bb-head"><img class="bb-mark" src="./dicto-logo.png?v=2" alt="" width="18" height="18"><span data-i18n="books.tag">Book</span></p><h3 class="t" data-i18n="books.golden.title">The Golden Cycle: Icosahedral Shells</h3><p class="sub">Cycles of Growth · Part I</p><p class="s" data-i18n="books.golden.desc">Thirteen papers on icosahedral shells, from the Chain of Karma to the gnomon: the icosahedron and the dodecahedron each fill exactly as a shell round the other, the shells alternate without end and grow by φ³ each turn; six solids nest in a cycle, turned inside out it gives a second cycle, and the full turn of twelve stations is a gnomon. 122 pages, with a table of the cycles and an index.</p><span class="pdoi"><a class="doi-badge" href="https://doi.org/10.5281/zenodo.23752452" title="DICTO DOI, always the newest version"><span>DICTO DOI</span><span>10.5281/zenodo.23752452</span></a></span></div><span class="btns"><a class="btn" href="https://doi.org/10.5281/zenodo.23752452" data-i18n="books.read">Read the book</a></span><button type="button" class="bb-close" aria-label="Turn back to the front cover" data-i18n-attr="aria-label:books.unflip">↺</button></div></div></div>
+      <div class="book"><div class="book-in"><button type="button" class="book-front" aria-expanded="false" aria-controls="book-stars"><span class="vh" data-i18n="books.turn">Turn over: </span><img src="papers/star-cores-cover.jpg?v=1" alt="The cover of Star Cores: the letters S T A R C O R E S in a nine by nine square, each on a star of one of DICTO's shapes, with the title in LED-style letters" loading="eager" width="800" height="1131"></button><div class="book-back" id="book-stars" role="group" aria-label="Star Cores: Spikes, Halos and Cycles"><div class="bb-scroll"><p class="bb-head"><img class="bb-mark" src="./dicto-logo.png?v=2" alt="" width="18" height="18"><span data-i18n="books.tag">Book</span></p><h3 class="t" data-i18n="books.stars.title">Star Cores: Spikes, Halos and Cycles</h3><p class="sub">Cycles of Growth · Part II</p><p class="s" data-i18n="books.stars.desc">Every solid can be divided into pyramids, one on each face, meeting at the centre; DICTO turned them inside out, and the solid becomes a star wrapped in its halo. Five papers as five chapters: the TI Star; polar spikes that always fill the layer to the halo; cores that swap back and forth; the exact gains of DICTO's growth rule; and the valley law, by which the symmetric stars freeze while the sharp-edged pieces keep growing. With a card for each of 60 shapes, six plates and the cycles in one table. 131 pages.</p><span class="pdoi"><a class="doi-badge" href="https://doi.org/10.5281/zenodo.23867732" title="DICTO DOI, always the newest version"><span>DICTO DOI</span><span>10.5281/zenodo.23867732</span></a></span></div><span class="btns"><a class="btn" href="https://doi.org/10.5281/zenodo.23867732" data-i18n="books.read">Read the book</a></span><button type="button" class="bb-close" aria-label="Turn back to the front cover" data-i18n-attr="aria-label:books.unflip">↺</button></div></div></div>
+      <span class="series-name" id="series-cog" data-i18n="books.series">Cycles of Growth</span>
       </div>
     </div>
     <h2 id="papers">Papers</h2>
@@ -398,5 +460,213 @@
 
     <footer>© DICTO</footer>
   </main>
+  <!-- Site i18n (2026-11-03), ready for the whole site: any element with data-i18n="key" takes its text from
+       SITE_I18N.strings[lang][key]; data-i18n-attr="attr:key;attr2:key2" does the same for attributes. English is
+       the HTML itself (what search engines read): it is kept as the fallback for any key a language lacks.
+       To add a section: put data-i18n keys on its texts ("section.thing") and add those keys to each language below.
+       Book titles and DICTO's names of solids, pieces and families stay in English, as in the apps.
+       Translations are machine-drafted (2026-11-03) and await native checking. -->
+  <script>
+  (function () {
+    var SITE_I18N = { order: ["en", "ja", "es", "fr", "ko", "zh", "ru"], native: {"en": "English", "ja": "日本語", "es": "Español", "fr": "Français", "ko": "한국어", "zh": "中文", "ru": "Русский"}, strings: {
+ "ja": {
+  "site.language": "言語",
+  "books.heading": "本",
+  "books.note": "DICTO の本：マニフェストと、テーマごとにまとめた論文。",
+  "books.hint": "表紙をタップするか、ポインターを合わせると裏返ります。",
+  "books.tag": "本",
+  "books.read": "本を読む",
+  "books.app": "アプリで\u200b見る",
+  "books.turn": "裏返す：",
+  "books.unflip": "表紙に戻す",
+  "books.quanta.title": "空間の量子 ― マニフェスト",
+  "books.quanta.desc": "DICTO のマニフェストであり、作品全体の見取り図。空間はピースに分け合われているのか、それはどのピースか。すべての論文を六つの章の短い項目として収め、中心に半分の規則を置き、すべての原子の目録を付す。名前のある形のすべてを D番号とともに、一つずつ描く。153ページ。",
+  "books.hexoct.desc": "十六本の論文を一冊に。DICTO のペットボトルキャップの DICTOspheres から、スピンアイスと二つの HexOct タイルまで。六方性の法則は構造結晶学の法則である。最密充填のあらゆる結晶構造では、層がどう積み重なっていても、空間は有限種類のピースに分け合われ、それらは立方構造と六方構造からそのまま、あるいは半分ずつ借りたものである。ピースは入れ替えによってのみ変わり、あらゆる個数は構造の六方性（結晶学者のいう六方的な層の割合）に対して直線になる。続いて実在の物質での法則：チタン中の水素から電池の正極、氷、ダイヤモンド、ナノワイヤ、磁性体まで。次に HexOct：あらゆる積層はわずか二つのタイルの列であり、キー付きのタイル HexOct-K は計算ができる。最後に、第IV部で新しく加わった窓の法則。六方性の法則を含み、その正確な適用範囲を示す。バージョン7・第3版：113ページ、図版13枚、索引、新しい表紙。",
+  "books.alicia.desc": "四次元空間の二つの正多胞体を、その影と切り口で見る。600胞体 White Queen と、その極の相手である120胞体 Red Queen。そしてそこへ至った仕事、1900年のアリシア・ブール・ストットの切断から DICTO の放射状セル投影まで。アリストテレスの五つの角錐は、四次元の立体の核であることがわかる。バージョン3：117ページ、全ページ図版43枚。",
+  "books.bonds.desc": "DICTONIC bond とは、一緒に空間を充填する二つのピースの組で、四つある。Golden bond（Icosaxes と Unborn Axes）、Keyed bond（Lotus Jewel Axes と Dodecaxes）、Delian bond（Samson と Delilah）、Twinned Delian bond（Sonsam と Lahdeli）。十一本の論文を、DICTO が提案した順に十一の章として収める：プラトン立体のあらゆる組み合わせが空間を充填すること。結合を見つける黄金の切断とデロスの切断。一つの重みが動くときの共有面の網。そしてあらゆる最密積層のための半分の規則。106ページ、索引付き。",
+  "books.golden.desc": "正二十面体の殻についての十三本の論文。Chain of Karma からグノモンまで。正二十面体と正十二面体は、互いのまわりの殻としてそれぞれぴったり充填し、殻は果てしなく交互に続き、一巡りごとに φ³ 倍に育つ。六つの立体が一つのサイクルに入れ子になり、それを裏返すと第二のサイクルが生まれ、十二の駅からなる一巡りはグノモンである。122ページ、サイクルの表と索引付き。",
+  "books.stars.desc": "どの立体も、各面に一つずつ、中心で出会う角錐に分けられる。DICTO はそれを裏返し、立体はハローに包まれた星になる。五本の論文を五つの章に：TI Star。ハローまでの層を必ず埋める極のスパイク。行き来して入れ替わるコア。DICTO の成長規則の正確な増分。そして谷の法則：対称な星は凍りつき、鋭い稜をもつピースは育ち続ける。60の形それぞれのカード、図版6枚、サイクルを一つにまとめた表付き。131ページ。"
+ },
+ "es": {
+  "site.language": "Idioma",
+  "books.heading": "Libros",
+  "books.note": "Libros de DICTO: su manifiesto y sus artículos reunidos por tema.",
+  "books.hint": "Toca una cubierta, o pasa el puntero por encima, para darle la vuelta.",
+  "books.tag": "Libro",
+  "books.read": "Leer el libro",
+  "books.app": "Ver en la app",
+  "books.turn": "Dar la vuelta: ",
+  "books.unflip": "Volver a la cubierta",
+  "books.quanta.desc": "El manifiesto de DICTO y la visión de conjunto de toda la obra: ¿se reparte el espacio en piezas, y en cuáles? Cada artículo como una entrada breve en seis capítulos, con la regla de las mitades en el centro, y el catálogo de todos los átomos: cada forma con nombre, con su número D, dibujada por separado. 153 páginas.",
+  "books.hexoct.desc": "Dieciséis artículos en un libro, desde las DICTOspheres de tapones de botellas PET de DICTO hasta el hielo de espín y las dos baldosas HexOct. La ley de hexagonalidad es una ley de la cristalografía estructural: en toda estructura cristalina de empaquetamiento compacto, se apilen como se apilen sus capas, el espacio se reparte en un número finito de tipos de pieza, tomados enteros o por mitades de las estructuras cúbica y hexagonal; las piezas solo cambian por intercambio; y todo recuento es una línea recta en la hexagonalidad de la estructura, la proporción de capas hexagonales de los cristalógrafos. Luego la ley en materiales reales, del hidrógeno en el titanio a los cátodos de baterías, el hielo, el diamante, los nanohilos y los imanes. Después HexOct: todo apilamiento es una cadena de solo dos baldosas, y las baldosas con llave, HexOct-K, pueden calcular. Por último, nueva en la Parte IV, la ley de la ventana, que contiene la ley de hexagonalidad y marca su alcance exacto. Versión 7, tercera edición: 113 páginas con 13 láminas, un índice y una cubierta nueva.",
+  "books.alicia.desc": "Dos sólidos regulares del espacio de cuatro dimensiones, vistos por sus sombras y sus cortes: el 600-celdas, la White Queen, y su compañero polar, el 120-celdas, la Red Queen, con el trabajo que llevó a ellos, desde los cortes de Alicia Boole Stott de 1900 hasta la proyección radial de celdas de DICTO. Las cinco pirámides de Aristóteles resultan ser los núcleos de los sólidos de cuatro dimensiones. Versión 3: 117 páginas con 43 láminas a página completa.",
+  "books.bonds.desc": "Un DICTONIC bond es un par de piezas que llenan el espacio juntas, y hay cuatro: el Golden bond, Icosaxes y Unborn Axes; el Keyed bond, Lotus Jewel Axes y Dodecaxes; el Delian bond, Samson y Delilah; y el Twinned Delian bond, Sonsam y Lahdeli. Once artículos como once capítulos, en el orden que propuso DICTO: toda mezcla de sólidos platónicos llena el espacio; los cortes áureos y delios que encuentran los enlaces; la red de caras compartidas cuando se desliza un peso; y la regla de las mitades para todo apilamiento compacto. 106 páginas, con índice.",
+  "books.golden.desc": "Trece artículos sobre capas icosaédricas, de la Chain of Karma al gnomon: el icosaedro y el dodecaedro llenan cada uno exactamente una capa alrededor del otro, las capas se alternan sin fin y crecen φ³ en cada vuelta; seis sólidos se anidan en un ciclo, vuelto del revés da un segundo ciclo, y la vuelta completa de doce estaciones es un gnomon. 122 páginas, con una tabla de los ciclos y un índice.",
+  "books.stars.desc": "Todo sólido puede dividirse en pirámides, una sobre cada cara, que se encuentran en el centro; DICTO las volvió del revés, y el sólido se convierte en una estrella envuelta en su halo. Cinco artículos como cinco capítulos: la TI Star; púas polares que siempre llenan la capa hasta el halo; núcleos que se intercambian de ida y vuelta; las ganancias exactas de la regla de crecimiento de DICTO; y la ley del valle, por la que las estrellas simétricas se congelan mientras las piezas de aristas afiladas siguen creciendo. Con una ficha para cada una de 60 formas, seis láminas y los ciclos en una tabla. 131 páginas."
+ },
+ "fr": {
+  "site.language": "Langue",
+  "books.heading": "Livres",
+  "books.note": "Les livres de DICTO : son manifeste, et ses articles réunis par thème.",
+  "books.hint": "Touchez une couverture, ou survolez-la, pour la retourner.",
+  "books.tag": "Livre",
+  "books.read": "Lire le livre",
+  "books.app": "Voir dans l'app",
+  "books.turn": "Retourner : ",
+  "books.unflip": "Revenir à la couverture",
+  "books.quanta.desc": "Le manifeste de DICTO et la vue d'ensemble de toute l'œuvre : l'espace est-il partagé en pièces, et lesquelles ? Chaque article en une courte entrée, en six chapitres, avec la règle des moitiés au centre, et le catalogue de tous les atomes : chaque forme nommée avec son numéro D, dessinée seule. 153 pages.",
+  "books.hexoct.desc": "Seize articles en un livre, des DICTOspheres en bouchons de bouteilles PET de DICTO jusqu'à la glace de spin et aux deux tuiles HexOct. La loi d'hexagonalité est une loi de cristallographie structurale : dans toute structure cristalline compacte, quel que soit l'empilement de ses couches, l'espace se partage en un nombre fini de sortes de pièces, empruntées entières ou par moitiés aux structures cubique et hexagonale ; les pièces ne changent que par échange ; et chaque décompte est une droite en fonction de l'hexagonalité de la structure, la part de couches hexagonales des cristallographes. Puis la loi dans les matériaux réels, de l'hydrogène dans le titane aux cathodes de batteries, à la glace, au diamant, aux nanofils et aux aimants. Puis HexOct : tout empilement est une suite de deux tuiles seulement, et les tuiles à clé, HexOct-K, savent calculer. Enfin, nouvelle dans la partie IV, la loi de la fenêtre, qui contient la loi d'hexagonalité et en marque la portée exacte. Version 7, troisième édition : 113 pages avec 13 planches, un index et une nouvelle couverture.",
+  "books.alicia.desc": "Deux solides réguliers de l'espace à quatre dimensions, vus par leurs ombres et leurs coupes : le 600-cellules, la White Queen, et son partenaire polaire le 120-cellules, la Red Queen, avec les travaux qui y ont mené, des coupes d'Alicia Boole Stott en 1900 à la projection radiale des cellules de DICTO. Les cinq pyramides d'Aristote se révèlent être les noyaux des solides à quatre dimensions. Version 3 : 117 pages avec 43 planches pleine page.",
+  "books.bonds.desc": "Un DICTONIC bond est une paire de pièces qui remplissent l'espace ensemble, et il y en a quatre : le Golden bond, Icosaxes et Unborn Axes ; le Keyed bond, Lotus Jewel Axes et Dodecaxes ; le Delian bond, Samson et Delilah ; et le Twinned Delian bond, Sonsam et Lahdeli. Onze articles en onze chapitres, dans l'ordre proposé par DICTO : tout mélange de solides de Platon remplit l'espace ; les coupes d'or et déliennes qui trouvent les liaisons ; le réseau de faces partagées quand un poids glisse ; et la règle des moitiés pour tout empilement compact. 106 pages, avec un index.",
+  "books.golden.desc": "Treize articles sur les coquilles icosaédriques, de la Chain of Karma au gnomon : l'icosaèdre et le dodécaèdre remplissent chacun exactement une coquille autour de l'autre, les coquilles alternent sans fin et croissent de φ³ à chaque tour ; six solides s'emboîtent en un cycle, retourné il donne un second cycle, et le tour complet de douze stations est un gnomon. 122 pages, avec une table des cycles et un index.",
+  "books.stars.desc": "Tout solide se divise en pyramides, une sur chaque face, qui se rejoignent au centre ; DICTO les a retournées, et le solide devient une étoile enveloppée dans son halo. Cinq articles en cinq chapitres : la TI Star ; des pointes polaires qui remplissent toujours la couche jusqu'au halo ; des noyaux qui s'échangent dans les deux sens ; les gains exacts de la règle de croissance de DICTO ; et la loi de la vallée, par laquelle les étoiles symétriques se figent tandis que les pièces aux arêtes vives continuent de croître. Avec une fiche pour chacune des 60 formes, six planches et les cycles en une table. 131 pages."
+ },
+ "ko": {
+  "site.language": "언어",
+  "books.heading": "책",
+  "books.note": "DICTO의 책: 그의 선언문과 주제별로 엮은 논문들.",
+  "books.hint": "표지를 탭하거나 포인터를 올리면 뒤집힙니다.",
+  "books.tag": "책",
+  "books.read": "책 읽기",
+  "books.app": "앱에서 보기",
+  "books.turn": "뒤집기: ",
+  "books.unflip": "앞표지로 돌리기",
+  "books.quanta.desc": "DICTO의 선언문이자 작업 전체의 개관: 공간은 조각들로 나뉘어 있는가, 그렇다면 어떤 조각들인가? 모든 논문을 여섯 장의 짧은 항목으로 담고, 그 중심에 절반의 규칙을 두며, 모든 원자의 목록을 실었다. 이름 붙은 모든 형태를 D 번호와 함께 하나씩 그렸다. 153쪽.",
+  "books.hexoct.desc": "논문 열여섯 편을 한 권에. DICTO의 페트병 뚜껑 DICTOspheres에서 스핀 아이스와 두 HexOct 타일까지. 육방성 법칙은 구조 결정학의 법칙이다. 모든 조밀 충전 결정 구조에서 층이 어떻게 쌓이든, 공간은 유한한 종류의 조각으로 나뉘며, 그 조각들은 입방 구조와 육방 구조에서 통째로 또는 절반씩 빌려 온 것이다. 조각은 맞바꿈으로만 바뀌고, 모든 개수는 구조의 육방성(결정학자들이 말하는 육방 층의 비율)에 대해 직선이 된다. 이어서 실제 물질 속의 법칙: 티타늄 속 수소에서 배터리 양극, 얼음, 다이아몬드, 나노와이어, 자석까지. 다음은 HexOct: 모든 적층은 단 두 타일의 열이며, 키가 있는 타일 HexOct-K는 계산을 할 수 있다. 끝으로 제4부에 새로 실린 창의 법칙은 육방성 법칙을 포함하며 그 정확한 범위를 보여 준다. 버전 7, 제3판: 113쪽, 도판 13장, 색인, 새 표지.",
+  "books.alicia.desc": "4차원 공간의 두 정다포체를 그 그림자와 단면으로 본다. 600포체 White Queen과, 그 극쌍대인 120포체 Red Queen. 그리고 그에 이르기까지의 연구, 1900년 앨리샤 불 스톳의 단면에서 DICTO의 방사형 셀 투영까지. 아리스토텔레스의 다섯 각뿔은 4차원 입체의 핵임이 드러난다. 버전 3: 117쪽, 전면 도판 43장.",
+  "books.bonds.desc": "DICTONIC bond는 함께 공간을 채우는 두 조각의 쌍이며, 넷이 있다: Golden bond(Icosaxes와 Unborn Axes), Keyed bond(Lotus Jewel Axes와 Dodecaxes), Delian bond(Samson과 Delilah), Twinned Delian bond(Sonsam과 Lahdeli). 논문 열한 편을 DICTO가 제안한 순서대로 열한 장으로 엮었다: 플라톤 입체의 모든 조합이 공간을 채운다는 것, 결합을 찾아내는 황금 절단과 델로스 절단, 하나의 가중치가 움직일 때 공유면의 그물, 그리고 모든 조밀 적층에 대한 절반의 규칙. 106쪽, 색인 포함.",
+  "books.golden.desc": "정이십면체 껍질에 관한 논문 열세 편, Chain of Karma에서 그노몬까지: 정이십면체와 정십이면체는 각각 서로를 둘러싼 껍질로 정확히 채워지고, 껍질은 끝없이 번갈아 나타나며 한 바퀴마다 φ³배로 자란다. 여섯 입체가 하나의 순환 속에 포개지고, 이를 뒤집으면 두 번째 순환이 되며, 열두 정거장의 한 바퀴는 그노몬이다. 122쪽, 순환표와 색인 포함.",
+  "books.stars.desc": "모든 입체는 각 면에 하나씩, 중심에서 만나는 각뿔들로 나눌 수 있다. DICTO가 그것을 뒤집자 입체는 후광에 싸인 별이 된다. 논문 다섯 편을 다섯 장으로: TI Star, 후광까지의 층을 언제나 채우는 극 스파이크, 서로 오가며 맞바뀌는 코어, DICTO 성장 규칙의 정확한 증가분, 그리고 골짜기 법칙: 대칭인 별은 얼어붙고 날카로운 모서리의 조각은 계속 자란다. 60가지 형태마다 한 장의 카드, 도판 6장, 순환을 한 표에 담았다. 131쪽."
+ },
+ "zh": {
+  "site.language": "语言",
+  "books.heading": "书籍",
+  "books.note": "DICTO 的书：他的宣言，以及按主题汇集的论文。",
+  "books.hint": "轻点封面，或将指针移到封面上，即可翻到背面。",
+  "books.tag": "书",
+  "books.read": "阅读本书",
+  "books.app": "在应用中\u200b查看",
+  "books.turn": "翻面：",
+  "books.unflip": "翻回封面",
+  "books.quanta.desc": "DICTO 的宣言，也是全部作品的总览：空间是否被分成一块块，又是哪些块？每篇论文作为简短条目分入六章，以“一半规则”为中心，并附全部原子的目录：每个有名字的形状都带有 D 编号，单独绘出。153 页。",
+  "books.hexoct.desc": "十六篇论文合为一书，从 DICTO 用 PET 瓶盖做的 DICTOspheres，到自旋冰和两种 HexOct 拼块。六方性定律是结构晶体学的一条定律：在每一种密堆积晶体结构中，无论各层怎样堆叠，空间都被分成有限种块，这些块整块或半块地取自立方结构和六方结构；块只通过互换而改变；而每一个计数都是结构六方性（晶体学家所说的六方层比例）的一条直线。接着是真实材料中的定律，从钛中的氢到电池正极、冰、金刚石、纳米线和磁体。然后是 HexOct：每一种堆叠都只是两种拼块组成的序列，而带键的拼块 HexOct-K 能够计算。最后是第四部分新增的窗口定律，它包含六方性定律并标出其确切范围。第 7 版（第三版）：113 页，13 幅图版，附索引和新封面。",
+  "books.alicia.desc": "四维空间中的两种正多胞体，借它们的影子和截面来看：600 胞体 White Queen，以及它的极对偶 120 胞体 Red Queen；还有通向它们的研究，从 1900 年艾丽西亚·布尔·斯托特的截面到 DICTO 的径向胞投影。亚里士多德的五个棱锥原来正是四维立体的核心。第 3 版：117 页，43 幅整页图版。",
+  "books.bonds.desc": "DICTONIC bond 是一对共同填满空间的块，共有四种：Golden bond（Icosaxes 与 Unborn Axes）、Keyed bond（Lotus Jewel Axes 与 Dodecaxes）、Delian bond（Samson 与 Delilah）以及 Twinned Delian bond（Sonsam 与 Lahdeli）。十一篇论文按 DICTO 提出的顺序成为十一章：柏拉图立体的每一种混合都能填满空间；找到这些键的黄金切割与提洛切割；一个权重滑动时共享面的网络；以及适用于每一种密堆积的“一半规则”。106 页，附索引。",
+  "books.golden.desc": "十三篇关于二十面体壳层的论文，从 Chain of Karma 到磬折形：正二十面体和正十二面体各自恰好作为壳层包住对方，壳层无穷交替，每转一圈增长 φ³ 倍；六个立体嵌套成一个循环，内外翻转得到第二个循环，十二站的一整圈是一个磬折形。122 页，附循环表和索引。",
+  "books.stars.desc": "每个立体都可以分成棱锥，每个面上一个，在中心相会；DICTO 把它们内外翻转，立体就成了一颗被光晕包裹的星。五篇论文成为五章：TI Star；总能填满到光晕为止那一层的极刺；来回互换的核心；DICTO 生长规则的精确增量；以及山谷定律：对称的星停止生长，而棱边锋利的块继续生长。附 60 个形状各一张卡片、六幅图版和汇总循环的一张表。131 页。"
+ },
+ "ru": {
+  "site.language": "Язык",
+  "books.heading": "Книги",
+  "books.note": "Книги DICTO: его манифест и его статьи, собранные по темам.",
+  "books.hint": "Коснитесь обложки или наведите на неё указатель, чтобы перевернуть её.",
+  "books.tag": "Книга",
+  "books.read": "Читать книгу",
+  "books.app": "Открыть в 3D",
+  "books.turn": "Перевернуть: ",
+  "books.unflip": "Вернуть к обложке",
+  "books.quanta.desc": "Манифест DICTO и обзор всей работы: делится ли пространство на части, и на какие? Каждая статья — короткая запись в одной из шести глав, в центре — правило половин; и каталог всех атомов: каждая названная форма со своим D-номером, нарисованная отдельно. 153 страницы.",
+  "books.hexoct.desc": "Шестнадцать статей в одной книге: от DICTOspheres DICTO из крышек ПЭТ-бутылок до спинового льда и двух плиток HexOct. Закон гексагональности — закон структурной кристаллографии: в любой плотноупакованной кристаллической структуре, как бы ни были уложены её слои, пространство делится на конечное число видов частей, взятых целиком или наполовину из кубической и гексагональной структур; части меняются только обменом; и каждое число — прямая линия по гексагональности структуры, то есть по доле гексагональных слоёв, как её понимают кристаллографы. Затем закон в реальных материалах: от водорода в титане до катодов батарей, льда, алмаза, нанопроволок и магнитов. Затем HexOct: любая укладка — это цепочка всего из двух плиток, а плитки с ключом, HexOct-K, умеют вычислять. Наконец, новый в части IV закон окна, который содержит закон гексагональности и отмечает его точные границы. Версия 7, третье издание: 113 страниц, 13 иллюстраций на отдельных листах, указатель и новая обложка.",
+  "books.alicia.desc": "Два правильных тела четырёхмерного пространства, увиденные через их тени и сечения: 600-ячейник, White Queen, и его полярный партнёр 120-ячейник, Red Queen, — и работа, которая к ним привела, от сечений Алисии Буль Стотт 1900 года до радиальной проекции ячеек DICTO. Пять пирамид Аристотеля оказываются ядрами четырёхмерных тел. Версия 3: 117 страниц, 43 полностраничные иллюстрации.",
+  "books.bonds.desc": "DICTONIC bond — это пара частей, которые вместе заполняют пространство; их четыре: Golden bond — Icosaxes и Unborn Axes; Keyed bond — Lotus Jewel Axes и Dodecaxes; Delian bond — Samson и Delilah; и Twinned Delian bond — Sonsam и Lahdeli. Одиннадцать статей как одиннадцать глав, в порядке, предложенном DICTO: любая смесь платоновых тел заполняет пространство; золотые и делосские сечения, которые находят связи; сеть общих граней, когда скользит один вес; и правило половин для любой плотной укладки. 106 страниц, с указателем.",
+  "books.golden.desc": "Тринадцать статей об икосаэдрических оболочках, от Chain of Karma до гномона: икосаэдр и додекаэдр каждый точно заполняют оболочку вокруг другого, оболочки чередуются без конца и растут в φ³ раз за каждый оборот; шесть тел вкладываются в цикл, вывернутый наизнанку, он даёт второй цикл, а полный оборот из двенадцати станций — гномон. 122 страницы, с таблицей циклов и указателем.",
+  "books.stars.desc": "Любое тело можно разделить на пирамиды, по одной на каждой грани, сходящиеся в центре; DICTO вывернул их наизнанку, и тело становится звездой, окутанной своим ореолом. Пять статей как пять глав: TI Star; полярные шипы, которые всегда заполняют слой до ореола; ядра, которые меняются местами туда и обратно; точные приросты правила роста DICTO; и закон долины, по которому симметричные звёзды застывают, а части с острыми рёбрами продолжают расти. С карточкой для каждой из 60 форм, шестью иллюстрациями и циклами в одной таблице. 131 страница."
+ }
+} };
+    var KEY = 'dictospheres-lang';
+    var en = new WeakMap();
+    function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+    function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+    function initial() {
+      var saved = load(KEY);
+      if (saved && SITE_I18N.order.indexOf(saved) >= 0) return saved;
+      var prefs = navigator.languages || [navigator.language || 'en'];
+      for (var i = 0; i < prefs.length; i++) {
+        var code = String(prefs[i]).toLowerCase().split('-')[0];
+        if (SITE_I18N.order.indexOf(code) >= 0) return code;
+      }
+      return 'en';
+    }
+    function apply(lang) {
+      var table = SITE_I18N.strings[lang] || {};
+      document.documentElement.lang = lang;
+      document.querySelectorAll('[data-i18n]').forEach(function (el) {
+        if (!en.has(el)) en.set(el, el.textContent);
+        var s = table[el.getAttribute('data-i18n')];
+        el.textContent = s != null ? s : en.get(el);
+        if (lang !== 'en' && s == null) el.setAttribute('lang', 'en'); else el.removeAttribute('lang');
+      });
+      document.querySelectorAll('[data-i18n-attr]').forEach(function (el) {
+        var orig = en.get(el) || {};
+        el.getAttribute('data-i18n-attr').split(';').forEach(function (pair) {
+          var p = pair.split(':'), attr = p[0].trim(), k = p[1].trim();
+          if (!(attr in orig)) orig[attr] = el.getAttribute(attr);
+          var s = table[k];
+          el.setAttribute(attr, s != null ? s : orig[attr]);
+        });
+        en.set(el, orig);
+      });
+      document.querySelectorAll('.lang-btn select').forEach(function (sel) { sel.value = lang; });
+    }
+    document.querySelectorAll('.lang-btn select').forEach(function (sel) {
+      sel.addEventListener('change', function () { store(KEY, sel.value); apply(sel.value); });
+    });
+    var first = initial();
+    if (first !== 'en') apply(first); else document.querySelectorAll('.lang-btn select').forEach(function (sel) { sel.value = 'en'; });
+    window.SITE_I18N = SITE_I18N;
+    window.siteI18nApply = apply;
+  })();
+
+  /* Books: a cover turns over to its back cover. Mouse: hover turns it. Keyboard: focus turns it, Enter/Space
+     toggles, Escape turns it back. Touch: tap turns it, a tap on the back (not a link) or ↺ turns it back. */
+  (function () {
+    document.documentElement.classList.add('bk-js');
+    var books = Array.prototype.slice.call(document.querySelectorAll('.books .book'));
+    var keyboard = false, quiet = false;
+    function refocus(el) { quiet = true; el.focus(); quiet = false; }
+    document.addEventListener('keydown', function (e) { if (e.key === 'Tab') keyboard = true; }, true);
+    document.addEventListener('pointerdown', function () { keyboard = false; }, true);
+    function set(book, on) {
+      book.classList.toggle('is-flipped', on);
+      book.querySelector('.book-front').setAttribute('aria-expanded', on ? 'true' : 'false');
+      var back = book.querySelector('.book-back');
+      if (on) back.removeAttribute('inert'); else back.setAttribute('inert', '');
+      back.setAttribute('aria-hidden', on ? 'false' : 'true');
+      if (on) books.forEach(function (b) { if (b !== book && b.classList.contains('is-flipped')) set(b, false); });
+    }
+    books.forEach(function (book) {
+      var front = book.querySelector('.book-front');
+      var back = book.querySelector('.book-back');
+      var timer = 0;
+      set(book, false);
+      front.addEventListener('click', function () { set(book, !book.classList.contains('is-flipped')); });
+      book.querySelector('.bb-close').addEventListener('click', function (e) {
+        e.stopPropagation(); set(book, false); if (keyboard) refocus(front);
+      });
+      back.addEventListener('click', function (e) {
+        if (e.target.closest('a, button')) return;
+        var sel = window.getSelection && String(window.getSelection());
+        if (sel) return;
+        set(book, false);
+      });
+      book.addEventListener('pointerenter', function (e) {
+        if (e.pointerType !== 'mouse') return;
+        clearTimeout(timer); timer = setTimeout(function () { set(book, true); }, 120);
+      });
+      book.addEventListener('pointerleave', function (e) {
+        if (e.pointerType !== 'mouse') return;
+        clearTimeout(timer);
+        if (!book.contains(document.activeElement) || !keyboard) set(book, false);
+      });
+      front.addEventListener('focus', function () { if (keyboard && !quiet) set(book, true); });
+      book.addEventListener('focusout', function (e) {
+        if (keyboard && !book.contains(e.relatedTarget)) set(book, false);
+      });
+      book.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && book.classList.contains('is-flipped')) { set(book, false); refocus(front); }
+      });
+    });
+  })();
+  </script>
 </body>
 </html>
