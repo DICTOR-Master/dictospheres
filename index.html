@@ -216,6 +216,8 @@
     footer { margin-top: 36px; text-align: center; color: var(--muted); font-size: 13px; }
   
   .tagline{font-size:1.35rem;line-height:1.4;max-width:34rem;margin:.6rem auto 1rem;text-align:center;color:var(--text)}
+  .hero-video{margin:0 auto 1rem;max-width:880px} .hero-video video{width:100%;aspect-ratio:840/486;border-radius:14px;display:block;background:#000;border:1px solid rgba(var(--gold-rgb),.35)}
+  .hero-video figcaption{color:var(--muted);font-size:.85rem;text-align:center;margin-top:.35rem}
   .hero-media{aspect-ratio:16/9;width:100%;max-width:880px;margin:0 auto 1rem;border-radius:14px;border:2px dashed rgba(var(--gold-rgb),.55);
     background:radial-gradient(ellipse at center,rgba(var(--gold-rgb),.14),transparent 70%);display:flex;align-items:center;justify-content:center;text-align:center;color:var(--gold);padding:16px;font-weight:600}
   .hero-media small{color:var(--muted);font-weight:400}
@@ -246,6 +248,7 @@
       </div>
       <p class="emblem-key"><b>D·I·C·T·O</b> — Dodecahedron, Icosahedron, Cube, Tetrahedron, Octahedron</p>
       <p class="tagline">Sculptures from recycled PET bottles, built on the five perfect shapes, and the new geometry they led to.</p>
+      <figure class="hero-video"><video autoplay muted loop playsinline preload="metadata" poster="media/sculpture-build-poster.jpg" aria-label="Video: DICTO building a sculpture from PET bottles and connectors"><source src="media/sculpture-build.mp4" type="video/mp4"></video><figcaption>DICTO building a PET-bottle sculpture</figcaption></figure>
       <p class="bio">Geometric sculptor in Osaka · Modular systems: <b>B1NR</b> / <b>DICTOspheres</b> · six registered Japanese designs for joining PET bottles</p>
       <p class="start"><a class="main" href="start-here/">Start Here</a><a href="https://rhombiverse.dictospheres.com/rhombis.html">Play RHOMBIS</a><a href="#books">Read the books and papers</a></p>
       <!-- Zenodo DOI badge (DICTO, 2026-10-09; one DICTO DOI only, 2026-10-20): Collected Geometric Works, always the latest version. -->
@@ -675,5 +678,6 @@
     });
   })();
   </script>
+<script>try{if(matchMedia('(prefers-reduced-motion: reduce)').matches){document.querySelectorAll('.hero-video video').forEach(function(v){v.removeAttribute('autoplay');v.pause();v.controls=true;});}}catch(e){}</script>
 </body>
 </html>
