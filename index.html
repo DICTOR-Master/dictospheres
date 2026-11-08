@@ -105,7 +105,7 @@
     .lang-btn:focus-within { outline: 2px solid var(--gold); outline-offset: 2px; }
     .lang-btn select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 16px; }
     .vh { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-    .books { --n: 2; --g: 20px; display: flex; flex-wrap: wrap; column-gap: var(--g); row-gap: 36px; padding: 0 calc(var(--g) / 2) 30px; margin: 0 0 8px; }
+    .books { --n: 2; --g: 20px; display: flex; flex-wrap: wrap; column-gap: var(--g); row-gap: 36px; padding: 26px calc(var(--g) / 2) 30px; margin: 0 0 8px; }
     @media (min-width: 520px) { .books { --n: 3; } }
     .books > .book { width: calc((100% - (var(--n) - 1) * var(--g)) / var(--n) - 0.5px); }
     .books > .series { width: calc(2 * (100% - (var(--n) - 1) * var(--g)) / var(--n) + var(--g) - 1px); display: flex; gap: var(--g); position: relative; }
