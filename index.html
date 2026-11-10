@@ -36,9 +36,16 @@
     .mark { width: 112px; height: 112px; margin: 0 auto 8px; display: block; }
     .emblem-key { margin: 0 0 14px; font-size: 12px; letter-spacing: 0.04em; color: var(--muted); }
     .emblem-key b { color: var(--gold); letter-spacing: 0.12em; }
-    .dicto-solids { list-style: none; display: flex; justify-content: center; gap: clamp(4px, 2vw, 22px); margin: 2px auto 16px; padding: 0; max-width: 640px; }
-    .dicto-solids li { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; }
-    .dicto-solids img { width: 100%; max-width: 96px; height: auto; aspect-ratio: 1 / 1; object-fit: contain; }
+    /* DICTO 2026-11-10: "one big revolving icon on the background: DICTO Square" — faint, slow, still for reduced motion */
+    .bg-square { position: fixed; left: 50%; top: 50%; width: min(130vmin, 1150px); aspect-ratio: 1; margin: 0; transform: translate(-50%, -50%);
+                 background: url(media/dicto-solids/dicto-square-bg.png) center / contain no-repeat; opacity: 0.08; pointer-events: none; z-index: 0;
+                 animation: bgspin 240s linear infinite; }
+    @keyframes bgspin { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .bg-square { animation: none; } }
+    main { position: relative; z-index: 1; }
+    .dicto-solids { list-style: none; display: flex; justify-content: space-between; gap: clamp(2px, 1vw, 22px); margin: 2px auto 16px; padding: 0; max-width: 640px; }
+    .dicto-solids li { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; }
+    .dicto-solids img { height: clamp(52px, 13vw, 96px); width: auto; display: block; }   /* one scale: letters equal and on one line (DICTO 11-10) */
     .dicto-solids span { margin-top: 4px; font-size: clamp(9px, 2.5vw, 13px); font-weight: 600; letter-spacing: 0.02em; white-space: nowrap; }
     /* Zenodo-style DOI badges: grey label, blue number; about 30px tall to tap. */
     .doi-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 14px; }
@@ -238,6 +245,7 @@
     <script type="application/ld+json">{"@context": "https://schema.org", "@type": "ItemList", "name": "Books by DICTO", "itemListElement": [{"@type": "ListItem", "position": 1, "item": {"@type": "Book", "name": "Quanta of Space: A Manifesto", "author": {"@type": "Person", "name": "DICTO"}, "url": "https://doi.org/10.5281/zenodo.23754454", "identifier": "10.5281/zenodo.23754454", "inLanguage": "en"}}, {"@type": "ListItem", "position": 2, "item": {"@type": "Book", "name": "HexOct: The Hexagonality Law", "author": {"@type": "Person", "name": "DICTO"}, "url": "https://doi.org/10.5281/zenodo.23731359", "identifier": "10.5281/zenodo.23731359", "inLanguage": "en"}}, {"@type": "ListItem", "position": 3, "item": {"@type": "Book", "name": "Alicia in Wonderland: The Red & White Queens", "author": {"@type": "Person", "name": "DICTO"}, "url": "https://doi.org/10.5281/zenodo.23753305", "identifier": "10.5281/zenodo.23753305", "inLanguage": "en"}}, {"@type": "ListItem", "position": 4, "item": {"@type": "Book", "name": "DICTONIC Bonds: from the Octet to the Rule of Halves", "author": {"@type": "Person", "name": "DICTO"}, "url": "https://doi.org/10.5281/zenodo.23898027", "identifier": "10.5281/zenodo.23898027", "inLanguage": "en"}}, {"@type": "ListItem", "position": 5, "item": {"@type": "Book", "name": "The Golden Cycle: Icosahedral Shells", "author": {"@type": "Person", "name": "DICTO"}, "url": "https://doi.org/10.5281/zenodo.23752452", "identifier": "10.5281/zenodo.23752452", "inLanguage": "en", "isPartOf": {"@type": "BookSeries", "name": "Cycles of Growth"}}}, {"@type": "ListItem", "position": 6, "item": {"@type": "Book", "name": "Star Cores: Spikes, Halos and Cycles", "author": {"@type": "Person", "name": "DICTO"}, "url": "https://doi.org/10.5281/zenodo.23867732", "identifier": "10.5281/zenodo.23867732", "inLanguage": "en", "isPartOf": {"@type": "BookSeries", "name": "Cycles of Growth"}}}, {"@type": "ListItem", "position": 7, "item": {"@type": "Book", "name": "The Golden Ladder: Golden Cuts from Plato to the Eighth Dimension", "author": {"@type": "Person", "name": "DICTO"}, "url": "https://doi.org/10.5281/zenodo.23966554", "identifier": "10.5281/zenodo.23966554", "inLanguage": "en"}}]}</script>
 </head>
 <body>
+  <div class="bg-square" aria-hidden="true"></div>
   <main>
     <header>
       <!-- DICTO's emblem, an abstraction of the name DICTO (DICTO, 2026-10-09): D, the open
@@ -253,11 +261,11 @@
       <!-- DICTO 2026-11-10: the name spelt by the five solids, as on the Quanta of Space cover, each shape's name under it in its
            element colour (agreed 10-22: D aether violet, I water blue, C earth green, T fire red, O air yellow). -->
       <ul class="dicto-solids" aria-label="D·I·C·T·O spelt by the five Platonic solids">
-        <li><img src="media/dicto-solids/solid-d.png" width="240" height="226" alt="D on a dodecahedron" /><span style="color:#8a5cc4">Dodecahedron</span></li>
-        <li><img src="media/dicto-solids/solid-i.png" width="240" height="225" alt="I on an icosahedron" /><span style="color:#3a70cd">Icosahedron</span></li>
-        <li><img src="media/dicto-solids/solid-c.png" width="217" height="240" alt="C on a cube" /><span style="color:#488e48">Cube</span></li>
-        <li><img src="media/dicto-solids/solid-t.png" width="240" height="220" alt="T on a tetrahedron" /><span style="color:#cd3e28">Tetrahedron</span></li>
-        <li><img src="media/dicto-solids/solid-o.png" width="240" height="230" alt="O on an octahedron" /><span style="color:#e8c852">Octahedron</span></li>
+        <li><img src="media/dicto-solids/solid2-d.png" width="149" height="148" alt="D on a dodecahedron" /><span style="color:#8a5cc4">Dodecahedron</span></li>
+        <li><img src="media/dicto-solids/solid2-i.png" width="148" height="148" alt="I on an icosahedron" /><span style="color:#3a70cd">Icosahedron</span></li>
+        <li><img src="media/dicto-solids/solid2-c.png" width="122" height="148" alt="C on a cube" /><span style="color:#488e48">Cube</span></li>
+        <li><img src="media/dicto-solids/solid2-t.png" width="118" height="148" alt="T on a tetrahedron" /><span style="color:#cd3e28">Tetrahedron</span></li>
+        <li><img src="media/dicto-solids/solid2-o.png" width="143" height="148" alt="O on an octahedron" /><span style="color:#e8c852">Octahedron</span></li>
       </ul>
       <p class="tagline">Sculptures from recycled PET bottles, built on the five perfect shapes, and the new geometry they led to.</p>
       <figure class="hero-video"><video autoplay muted loop playsinline preload="metadata" poster="media/sculpture-build-poster.jpg" aria-label="Video: DICTO building a sculpture from PET bottles and connectors"><source src="media/sculpture-build.mp4" type="video/mp4"></video><figcaption>DICTO building a PET-bottle sculpture</figcaption></figure>
