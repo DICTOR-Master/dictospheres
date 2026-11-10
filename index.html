@@ -38,7 +38,7 @@
     .emblem-key b { color: var(--gold); letter-spacing: 0.12em; }
     /* DICTO 2026-11-10: "one big revolving icon on the background: DICTO Square" — faint, slow, still for reduced motion */
     .bg-square { position: fixed; left: 50%; top: 50%; width: min(130vmin, 1150px); aspect-ratio: 1; margin: 0; transform: translate(-50%, -50%);
-                 background: url(media/dicto-solids/dicto-square-bg.png) center / contain no-repeat; opacity: 0.08; pointer-events: none; z-index: 0;
+                 background: url(media/dicto-solids/dicto-square-bg.webp) center / contain no-repeat; opacity: 0.08; pointer-events: none; z-index: 0;
                  animation: bgspin 240s linear infinite; }
     @keyframes bgspin { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
     @media (prefers-reduced-motion: reduce) { .bg-square { animation: none; } }
