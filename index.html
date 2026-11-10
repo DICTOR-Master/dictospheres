@@ -36,6 +36,10 @@
     .mark { width: 112px; height: 112px; margin: 0 auto 8px; display: block; }
     .emblem-key { margin: 0 0 14px; font-size: 12px; letter-spacing: 0.04em; color: var(--muted); }
     .emblem-key b { color: var(--gold); letter-spacing: 0.12em; }
+    .dicto-solids { list-style: none; display: flex; justify-content: center; gap: clamp(4px, 2vw, 22px); margin: 2px auto 16px; padding: 0; max-width: 640px; }
+    .dicto-solids li { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+    .dicto-solids img { width: 100%; max-width: 96px; height: auto; aspect-ratio: 1 / 1; object-fit: contain; }
+    .dicto-solids span { margin-top: 4px; font-size: clamp(9px, 2.5vw, 13px); font-weight: 600; letter-spacing: 0.02em; white-space: nowrap; }
     /* Zenodo-style DOI badges: grey label, blue number; about 30px tall to tap. */
     .doi-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 14px; }
     .doi-badge { display: inline-flex; border-radius: 3px; overflow: hidden; text-decoration: none; font: 600 11px/1 system-ui, sans-serif; }
@@ -246,7 +250,15 @@
         <h1>DICTO</h1>
         <img class="mark side" src="./dicto-logo.png?v=2" width="120" height="120" alt="DICTO emblem: an abstraction of the name DICTO" />
       </div>
-      <p class="emblem-key"><b>D·I·C·T·O</b> — Dodecahedron, Icosahedron, Cube, Tetrahedron, Octahedron</p>
+      <!-- DICTO 2026-11-10: the name spelt by the five solids, as on the Quanta of Space cover, each shape's name under it in its
+           element colour (agreed 10-22: D aether violet, I water blue, C earth green, T fire red, O air yellow). -->
+      <ul class="dicto-solids" aria-label="D·I·C·T·O spelt by the five Platonic solids">
+        <li><img src="media/dicto-solids/solid-d.png" width="240" height="226" alt="D on a dodecahedron" /><span style="color:#8a5cc4">Dodecahedron</span></li>
+        <li><img src="media/dicto-solids/solid-i.png" width="240" height="225" alt="I on an icosahedron" /><span style="color:#3a70cd">Icosahedron</span></li>
+        <li><img src="media/dicto-solids/solid-c.png" width="217" height="240" alt="C on a cube" /><span style="color:#488e48">Cube</span></li>
+        <li><img src="media/dicto-solids/solid-t.png" width="240" height="220" alt="T on a tetrahedron" /><span style="color:#cd3e28">Tetrahedron</span></li>
+        <li><img src="media/dicto-solids/solid-o.png" width="240" height="230" alt="O on an octahedron" /><span style="color:#e8c852">Octahedron</span></li>
+      </ul>
       <p class="tagline">Sculptures from recycled PET bottles, built on the five perfect shapes, and the new geometry they led to.</p>
       <figure class="hero-video"><video autoplay muted loop playsinline preload="metadata" poster="media/sculpture-build-poster.jpg" aria-label="Video: DICTO building a sculpture from PET bottles and connectors"><source src="media/sculpture-build.mp4" type="video/mp4"></video><figcaption>DICTO building a PET-bottle sculpture</figcaption></figure>
       <p class="bio">Geometric sculptor in Osaka · Modular systems: <b>B1NR</b> / <b>DICTOspheres</b> · six registered Japanese designs for joining PET bottles</p>
