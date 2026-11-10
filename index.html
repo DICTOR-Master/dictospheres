@@ -36,12 +36,11 @@
     .mark { width: 112px; height: 112px; margin: 0 auto 8px; display: block; }
     .emblem-key { margin: 0 0 14px; font-size: 12px; letter-spacing: 0.04em; color: var(--muted); }
     .emblem-key b { color: var(--gold); letter-spacing: 0.12em; }
-    /* DICTO 2026-11-10: "one big revolving icon on the background: DICTO Square" — faint, slow, still for reduced motion */
-    .bg-square { position: fixed; left: 50%; top: 50%; width: min(130vmin, 1150px); aspect-ratio: 1; margin: 0; transform: translate(-50%, -50%);
-                 background: url(media/dicto-solids/dicto-square-bg.webp) center / contain no-repeat; opacity: 0.08; pointer-events: none; z-index: 0;
-                 animation: bgspin 240s linear infinite; }
-    @keyframes bgspin { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
-    @media (prefers-reduced-motion: reduce) { .bg-square { animation: none; } }
+    /* DICTO 2026-11-10: the DICTO Square is the still backdrop; the lettered OG revolves in front of it (faint); page on top */
+    .bg-square { position: fixed; left: 50%; top: 50%; width: min(130vmin, 1150px); aspect-ratio: 1; transform: translate(-50%, -50%);
+                 background: url(media/dicto-solids/dicto-square-bg.webp) center / contain no-repeat; opacity: 0.08; pointer-events: none; z-index: 0; }
+    .bg-og { position: fixed; left: 50%; top: 50%; width: min(78vmin, 640px); height: auto; transform: translate(-50%, -50%);
+             opacity: 0.16; pointer-events: none; z-index: 0; }
     main { position: relative; z-index: 1; }
     .dicto-solids { list-style: none; display: flex; justify-content: space-between; gap: clamp(2px, 1vw, 22px); margin: 2px auto 16px; padding: 0; max-width: 640px; }
     .dicto-solids li { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; }
@@ -246,6 +245,7 @@
 </head>
 <body>
   <div class="bg-square" aria-hidden="true"></div>
+  <picture><source media="(prefers-reduced-motion: reduce)" srcset="media/dicto-solids/og-still.png"><img class="bg-og" src="media/dicto-solids/og-spin.webp" width="300" height="300" alt="" aria-hidden="true" decoding="async" fetchpriority="low"></picture>
   <main>
     <header>
       <!-- DICTO's emblem, an abstraction of the name DICTO (DICTO, 2026-10-09): D, the open
